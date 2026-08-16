@@ -130,6 +130,19 @@ GitHub Actions: `validation.yml` (lint/tests/secret-scan), `build.yml`
 (artefactos Windows x64) y `release.yml` (al crear un tag `v*` publica la
 release con los artefactos).
 
+### Mirrors de descarga (Catbox / GoFile)
+
+Cuando GitHub Releases va lento para descargar el binario, el workflow de
+release **también sube el ZIP portable a mirrors externos** y los publica en
+el body de la release (tabla "⚡ Descarga rápida"):
+
+- 🐱 **Catbox** — `https://catbox.moe` (upload anónimo, ~200 MB máx).
+- 📁 **GoFile** — `https://gofile.io` (upload anónimo, enlaces públicos).
+
+Si un mirror falla (p. ej. Catbox responde `Invalid uploader`), el paso lo
+reporta como aviso y continúa con el otro; la release se crea igual con los
+assets en GitHub.
+
 ## Seguridad
 
 - Los secretos **nunca** se escriben en logs, errores, diagnósticos ni emails

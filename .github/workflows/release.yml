@@ -57,6 +57,59 @@ jobs:
           Get-FileHash dist\Meshweave-portable-x64.zip -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  Meshweave-portable-x64.zip" } | Add-Content dist\SHA256SUMS.txt
           Get-FileHash dist\installer\Meshweave-Setup-x64.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  Meshweave-Setup-x64.exe" } | Add-Content dist\SHA256SUMS.txt
 
+      # ⚡ Mirrors externos (Catbox + GoFile): cuando GitHub Releases va lento,
+      # los usuarios pueden descargar el ZIP portable desde estos enlaces.
+      - name: ⚡ Upload mirrors (Catbox + GoFile)
+        shell: bash
+        run: |
+          ZIP_PATH=dist/Meshweave-portable-x64.zip
+          if [ ! -f "$ZIP_PATH" ]; then
+            echo "❌ No se encontró el ZIP portable"
+            exit 1
+          fi
+          echo "⬆️ Subiendo: Meshweave-portable-x64.zip"
+          # ── CATBOX ──
+          echo "📤 Subiendo a Catbox..."
+          CATBOX_URL=$(curl -s -F "reqtype=fileupload" -F "fileToUpload=@${ZIP_PATH}" https://catbox.moe/user/api.php)
+          if echo "$CATBOX_URL" | grep -q "^https\?://"; then
+            echo " ✅ $CATBOX_URL"
+          else
+            echo " ⚠️ Error: $CATBOX_URL"
+            CATBOX_URL=""
+          fi
+          # ── GOFILE ──
+          echo "📤 Subiendo a GoFile..."
+          SERVER=$(curl -s https://api.gofile.io/servers | python -c "import sys, json; print(json.load(sys.stdin)['data']['servers'][0]['name'])")
+          GOFILE_RESULT=$(curl -s -F "file=@${ZIP_PATH}" "https://${SERVER}.gofile.io/contents/uploadfile")
+          GOFILE_URL=$(echo "$GOFILE_RESULT" | python -c "import sys, json; print(json.load(sys.stdin).get('data', {}).get('downloadPage', ''))")
+          if [ -n "$GOFILE_URL" ]; then
+            echo " ✅ $GOFILE_URL"
+          else
+            echo " ⚠️ Error: $GOFILE_RESULT"
+            GOFILE_URL=""
+          fi
+          # ── GUARDAR URLs para el release body ──
+          echo "CATBOX_URL=${CATBOX_URL:-}" >> "$GITHUB_ENV"
+          echo "GOFILE_URL=${GOFILE_URL:-}" >> "$GITHUB_ENV"
+
+      - name: 📝 Build release body with mirror links
+        shell: bash
+        run: |
+          cp .github/release-template.md release-body.md
+          echo "" >> release-body.md
+          echo "---" >> release-body.md
+          echo "" >> release-body.md
+          echo "### ⚡ Descarga rápida (mirrors)" >> release-body.md
+          echo "" >> release-body.md
+          echo "| Mirror | Link |" >> release-body.md
+          echo "|--------|------|" >> release-body.md
+          if [ -n "${{ env.CATBOX_URL }}" ]; then
+            echo "| 🐱 Catbox | [${{ env.CATBOX_URL }}](${{ env.CATBOX_URL }}) |" >> release-body.md
+          fi
+          if [ -n "${{ env.GOFILE_URL }}" ]; then
+            echo "| 📁 GoFile | [${{ env.GOFILE_URL }}](${{ env.GOFILE_URL }}) |" >> release-body.md
+          fi
+
       - name: Crear GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -67,4 +120,5 @@ jobs:
             dist/Meshweave-portable-x64.zip
             dist/installer/Meshweave-Setup-x64.exe
             dist/SHA256SUMS.txt
+          body_path: release-body.md
           generate_release_notes: true
