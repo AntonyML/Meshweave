@@ -3,6 +3,14 @@ name: release
 on:
   push:
     tags: ["v*"]
+  # Permite lanzar la release manualmente desde la pestaña Actions
+  # (Run workflow). Si el tag no existe, action-gh-release lo crea.
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Tag de la release (p.ej. v0.1.0). Si no existe, se crea."
+        required: false
+        default: "v0.1.0"
 
 permissions:
   contents: write
@@ -52,6 +60,8 @@ jobs:
       - name: Crear GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          # Push de tag → el ref actual; manual → el tag del input (se crea si falta).
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
           files: |
             dist/Meshweave.exe
             dist/Meshweave-portable-x64.zip
