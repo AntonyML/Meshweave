@@ -9,7 +9,7 @@ import customtkinter as ctk
 
 from meshweave.config import load_config, save_config
 from meshweave.secrets import SecretStore
-from meshweave.ui.theme import C, FONT_UI
+from meshweave.ui.theme import FONT_UI, C
 from meshweave.ui.widgets import btn, card, h2
 
 

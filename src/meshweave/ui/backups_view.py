@@ -7,7 +7,7 @@ import customtkinter as ctk
 
 from meshweave.config import load_config
 from meshweave.paths import backups_dir
-from meshweave.ui.theme import C, FONT_UI
+from meshweave.ui.theme import FONT_UI, C
 from meshweave.ui.widgets import append_line, btn, card, h2, mono_box, tag_configure
 
 

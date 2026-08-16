@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import customtkinter as ctk
 
-from meshweave.ui.theme import C, FONT_MONO, FONT_UI
+from meshweave.ui.theme import FONT_MONO, FONT_UI, C
 from meshweave.ui.widgets import append_line, btn, card, h2, mono_box, tag_configure
 
 

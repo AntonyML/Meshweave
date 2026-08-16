@@ -4,7 +4,7 @@ from __future__ import annotations
 import customtkinter as ctk
 
 from meshweave.paths import logs_dir
-from meshweave.ui.theme import C, FONT_UI
+from meshweave.ui.theme import FONT_UI
 from meshweave.ui.widgets import btn, card, h2, mono_box, tag_configure
 
 

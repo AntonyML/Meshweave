@@ -1,7 +1,8 @@
 """API pública del subsistema de sync (motor + alertas + backup)."""
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from meshweave.config import RUNS_LOG, load_config, load_state
 from meshweave.sync.alerts import (

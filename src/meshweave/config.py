@@ -18,7 +18,11 @@ from urllib.parse import urlparse
 
 from meshweave.errors import ConfigError
 from meshweave.paths import (
-    backups_dir, config_dir, logs_dir, state_dir, ensure_dirs,
+    backups_dir,
+    config_dir,
+    ensure_dirs,
+    logs_dir,
+    state_dir,
 )
 from meshweave.secrets import SecretStore
 

@@ -9,11 +9,14 @@ from __future__ import annotations
 import json
 import subprocess as _sp
 import time
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable
+from typing import Any
 
 from meshweave.config import (
-    BACKUP_RUNS_LOG, BACKUPS_DIR, load_config, load_state, save_state,
+    BACKUP_RUNS_LOG,
+    BACKUPS_DIR,
+    load_config,
 )
 from meshweave.paths import logs_dir
 from meshweave.secrets import SecretStore
@@ -27,7 +30,7 @@ def run_backup(
 ) -> dict[str, Any]:
     """Dump completo de la nube vía pg_dump + retención. Devuelve el resultado."""
     cfg = cfg or load_config()
-    emit = emit or (lambda m, l: None)
+    emit = emit or (lambda msg, lvl: None)
     started = now_iso()
     t0 = time.time()
     result: dict[str, Any] = {

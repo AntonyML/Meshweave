@@ -11,10 +11,9 @@ from __future__ import annotations
 
 import subprocess
 import threading
-import time
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Callable
 
 from meshweave.errors import ProcessError
 
@@ -57,7 +56,7 @@ class ProcessRunner:
     def uptime(self) -> str:
         if not self.started_at:
             return "—"
-        s = int((datetime.now(timezone.utc) - self.started_at).total_seconds())
+        s = int((datetime.now(UTC) - self.started_at).total_seconds())
         return f"{s // 3600:02d}:{(s % 3600) // 60:02d}:{s % 60:02d}"
 
     def is_alive(self) -> bool:
@@ -97,7 +96,7 @@ class ProcessRunner:
         except OSError as e:
             raise ProcessError(f"No se pudo iniciar {self.name}: {e}") from e
         self.running = True
-        self.started_at = datetime.now(timezone.utc)
+        self.started_at = datetime.now(UTC)
         threading.Thread(target=self._reader, daemon=True).start()
         threading.Thread(target=self._watcher, daemon=True).start()
         return True, f"{self.name} iniciado."

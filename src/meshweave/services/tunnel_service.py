@@ -10,8 +10,9 @@ import json
 import os
 import subprocess
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from meshweave.config import load_config
 from meshweave.errors import ConfigError

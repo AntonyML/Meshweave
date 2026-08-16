@@ -18,12 +18,18 @@ import json
 import os
 import random
 import time
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from meshweave.config import (
-    STATE_PATH, RUNS_LOG, cloud_db_url, load_state, read_env_file, save_state,
+    RUNS_LOG,
+    STATE_PATH,
+    cloud_db_url,
+    load_state,
+    read_env_file,
+    save_state,
 )
 from meshweave.paths import logs_dir
 from meshweave.sync.alerts import maybe_send_failure_alert, maybe_send_summary
@@ -35,7 +41,7 @@ _STALE_LOCK_SECONDS = 6 * 3600  # un lock de más de 6 h se considera huérfano
 
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -459,7 +465,7 @@ class SyncEngine:
             json.dumps(v, ensure_ascii=False, default=str)
             if (col in json_cols and isinstance(v, (dict, list)))
             else v
-            for col, v in zip(cols, row)
+            for col, v in zip(cols, row, strict=False)
         )
 
     def _upsert_batches(self, cloud, upsert, rows: list, table: str, cols: list[str], json_cols: set[str]) -> None:

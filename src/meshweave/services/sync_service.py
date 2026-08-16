@@ -6,7 +6,8 @@ que le devuelve estados/eventos por callback.
 from __future__ import annotations
 
 import threading
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from meshweave import sync as sync_mod
 from meshweave import windows_tasks
@@ -26,7 +27,7 @@ class SyncService:
         def _go():
             try:
                 cfg = load_config()
-                result = sync_mod.run(cfg, emit=emit or (lambda m, l: None))
+                result = sync_mod.run(cfg, emit=emit or (lambda msg, lvl: None))
                 self._on_event("result", result)
             except Exception as e:  # noqa: BLE001
                 self._on_event("log", (f"ERROR: {e}", "error"))
@@ -38,7 +39,7 @@ class SyncService:
         def _go():
             try:
                 cfg = load_config()
-                result = sync_mod.run_backup(cfg, emit=emit or (lambda m, l: None))
+                result = sync_mod.run_backup(cfg, emit=emit or (lambda msg, lvl: None))
                 self._on_event("result", result)
             except Exception as e:  # noqa: BLE001
                 self._on_event("log", (f"ERROR backup: {e}", "error"))

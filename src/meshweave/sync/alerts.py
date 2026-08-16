@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -192,7 +192,7 @@ def _cooldown_ok(state_key: str, kind: str, minutes: int) -> bool:
         return True
     try:
         last_dt = datetime.fromisoformat(last)
-        if (datetime.now(timezone.utc) - last_dt).total_seconds() < minutes * 60:
+        if (datetime.now(UTC) - last_dt).total_seconds() < minutes * 60:
             return False
     except ValueError:
         pass
@@ -201,7 +201,7 @@ def _cooldown_ok(state_key: str, kind: str, minutes: int) -> bool:
 
 def _touch_cooldown(state_key: str, kind: str) -> None:
     state = load_state()
-    state.setdefault(state_key, {})[kind] = datetime.now(timezone.utc).isoformat()
+    state.setdefault(state_key, {})[kind] = datetime.now(UTC).isoformat()
     save_state(state)
 
 

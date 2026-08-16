@@ -18,15 +18,12 @@ Task Scheduler ejecuta `-m meshweave.workers.sync_worker run` (o `backup`).
 from __future__ import annotations
 
 import argparse
-import json
 import sys
-from typing import Any, Callable
+from collections.abc import Callable
 
-from meshweave import __version__
+from meshweave import __version__, windows_tasks
 from meshweave import sync as sync_mod
-from meshweave import windows_tasks
-from meshweave.config import migrate_legacy, load_config, load_state
-
+from meshweave.config import load_config, load_state, migrate_legacy
 
 # ── Logging ─────────────────────────────────────────────────────────────────
 
@@ -39,8 +36,9 @@ def emit_cli(msg: str, level: str = "info") -> None:
     """Escribe en stdout (CLI) y en el log rotativo de Meshweave."""
     line = f"{msg}"
     print(line)
-    from meshweave.logging_setup import redact
     import logging
+
+    from meshweave.logging_setup import redact
     getattr(logging.getLogger("meshweave.worker"), {
         "debug": "debug", "info": "info", "warn": "warning",
         "ok": "info", "error": "error",
@@ -68,12 +66,12 @@ def cmd_check(args) -> int:
 def cmd_run(args) -> int:
     _setup_logging()
     cfg = load_config()
-    emit: Callable[[str, str], None] = emit_cli if not args.dry_run else (lambda m, l: None)
+    emit: Callable[[str, str], None] = emit_cli if not args.dry_run else (lambda msg, lvl: None)
     if args.dry_run:
         print("── DRY-RUN (solo lectura, no escribe en la nube) ──")
         cfg = dict(cfg)
         cfg["batch_size"] = 5  # barrido rápido de lectura
-    result = sync_mod.run(cfg, emit=emit if not args.dry_run else (lambda m, l: print(m)))
+    result = sync_mod.run(cfg, emit=emit if not args.dry_run else (lambda msg, lvl: print(msg)))
     print(f"\nResultado: {result.get('status')} | filas: {result.get('total_rows')} "
           f"| tamaños: {result.get('db_sizes')}")
     if result.get("error"):

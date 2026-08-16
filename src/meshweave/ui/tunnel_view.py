@@ -6,7 +6,7 @@ import customtkinter as ctk
 from meshweave.config import load_config
 from meshweave.services import cloudflared_manager
 from meshweave.services.tunnel_service import cloudflared_service_status, prepare_runtime
-from meshweave.ui.theme import C, FONT_UI
+from meshweave.ui.theme import FONT_UI, C
 from meshweave.ui.widgets import btn, card, h2, mono_box, tag_configure
 
 

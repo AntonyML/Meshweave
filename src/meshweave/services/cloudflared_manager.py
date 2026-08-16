@@ -17,7 +17,6 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from meshweave import GITHUB_REPO
 from meshweave.errors import DownloadError
 from meshweave.paths import bin_dir, package_root
 

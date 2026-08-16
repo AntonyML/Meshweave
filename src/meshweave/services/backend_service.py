@@ -6,8 +6,9 @@ La ruta del proyecto y el comando son configurables desde la UI
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from meshweave.config import load_config
 from meshweave.process_runner import ProcessRunner

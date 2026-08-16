@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-
 import pytest
 
 from meshweave.config import DEFAULTS, cloud_db_url, load_config, save_config

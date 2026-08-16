@@ -26,9 +26,8 @@ from meshweave.ui.diagnostics_view import DiagnosticsView
 from meshweave.ui.logs_view import LogsView
 from meshweave.ui.settings_view import SettingsView
 from meshweave.ui.sync_view import SyncView
-from meshweave.ui.theme import C, FONT_MONO, FONT_UI
+from meshweave.ui.theme import FONT_MONO, FONT_UI, C
 from meshweave.ui.tunnel_view import TunnelView
-from meshweave.ui.widgets import btn, card, h2
 
 
 class Actions:
@@ -74,8 +73,9 @@ class Actions:
                 out = (r.stdout or r.stderr or "").strip()
                 self.app.post(lambda: self.app.toast(out or f"código {r.returncode}",
                                                      "ok" if r.returncode == 0 else "err"))
-            except Exception as e:  # noqa: BLE001
-                self.app.post(lambda: self.app.toast(str(e), "err"))
+            except Exception as exc:  # noqa: BLE001
+                err_msg = str(exc)
+                self.app.post(lambda: self.app.toast(err_msg, "err"))
         threading.Thread(target=_go, daemon=True).start()
 
     def service_install(self) -> tuple[bool, str]:
@@ -145,12 +145,12 @@ class Actions:
     def sync_now(self):
         self.app.sync_view.set_busy(True)
         self.app.sync_view.append("▶ Sincronizando (incremental)…", "info")
-        self.app.sync.run_now(emit=lambda m, l: self.app._q.put(("sync", m, l)))
+        self.app.sync.run_now(emit=lambda msg, lvl: self.app._q.put(("sync", msg, lvl)))
 
     def sync_backup_now(self):
         self.app.backups_view.append("▶ Backup del dump de la nube…", "info")
-        self.app.sync.run_backup(emit=lambda m, l: (self.app._q.put(("sync", m, l)),
-                                                    self.app._q.put(("backup", m, l))))
+        self.app.sync.run_backup(emit=lambda msg, lvl: (self.app._q.put(("sync", msg, lvl)),
+                                                        self.app._q.put(("backup", msg, lvl))))
 
     def sync_check(self):
         def _go():
