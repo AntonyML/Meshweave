@@ -1,0 +1,55 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias de build
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pytest pyinstaller pyinstaller-hooks-contrib
+
+      - name: Smoke test (headless)
+        env:
+          MESHWEAVE_DATA_DIR: ${{ runner.temp }}\meshweave-ci-data
+        run: |
+          python -m meshweave.workers.sync_worker check || python -c "print('check sin conexiones es esperado en CI')"
+          python scripts\smoke_test.py
+
+      - name: PyInstaller
+        run: python -m PyInstaller --noconfirm --clean scripts\meshweave.spec
+
+      - name: Zip portable
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist\Meshweave.exe, config.example.json, README.md -DestinationPath dist\Meshweave-portable-x64.zip -Force
+
+      - name: Checksums
+        shell: pwsh
+        run: |
+          Get-FileHash dist\Meshweave.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  Meshweave.exe" } | Set-Content dist\SHA256SUMS.txt
+          Get-FileHash dist\Meshweave-portable-x64.zip -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  Meshweave-portable-x64.zip" } | Add-Content dist\SHA256SUMS.txt
+
+      - name: Subir artefactos
+        uses: actions/upload-artifact@v4
+        with:
+          name: meshweave-windows-x64
+          path: |
+            dist/Meshweave.exe
+            dist/Meshweave-portable-x64.zip
+            dist/SHA256SUMS.txt
+          retention-days: 14

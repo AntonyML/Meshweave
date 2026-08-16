@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "meshweave"
+version = "0.1.0"
+description = "Meshweave — centro de control local: túnel Cloudflare, backend, sync Supabase, backups y alertas"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "Meshweave" }]
+keywords = ["cloudflare", "tunnel", "supabase", "sync", "backup", "desktop"]
+classifiers = [
+    "Operating System :: Microsoft :: Windows",
+    "Environment :: Win32 (MS Windows)",
+]
+
+# ID interno de la aplicación (para instalador/registro).
+# com.meshweave.desktop — ver docs/architecture.md
+
+dependencies = [
+    "customtkinter>=5.2.2",
+    "psycopg[binary]>=3.1",
+    "psutil>=5.9",
+]
+
+[project.scripts]
+meshweave = "meshweave.app:main"
+meshweave-sync = "meshweave.workers.sync_worker:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["E501"]

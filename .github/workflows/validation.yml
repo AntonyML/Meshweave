@@ -1,0 +1,67 @@
+name: validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pytest ruff
+
+      - name: Compilar (compileall)
+        run: python -m compileall -q src
+
+      - name: Ruff (lint)
+        run: ruff check src tests --output-format=github
+
+      - name: Tests
+        run: python -m pytest tests -q
+
+      - name: Validar configs de ejemplo (JSON)
+        run: |
+          python -c "import json; json.load(open('config.example.json')); print('config.example.json OK')"
+
+      - name: Secret scanning (git grep)
+        run: |
+          set -e
+          # Patrones de credenciales que NUNCA deben estar en el repo.
+          if git grep -n -I -E \
+            "(BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AIza[0-9A-Za-z_-]{35}|ghp_[0-9A-Za-z]{36}|AKIA[0-9A-Z]{16}|postgres(ql)?://[^/]*:[^@/]*@)" \
+            -- . ':!*.md' ':!*.example.json' ':!.github' >/dev/null 2>&1; then
+            echo "::error::Se encontraron patrones de secretos en el repo."
+            git grep -n -I -E "(BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AIza[0-9A-Za-z_-]{35}|ghp_[0-9A-Za-z]{36}|AKIA[0-9A-Z]{16}|postgres(ql)?://[^/]*:[^@/]*@)" -- . ':!*.md' ':!*.example.json' ':!.github'
+            exit 1
+          fi
+          # Archivos de credenciales prohibidos en el árbol de Git.
+          for f in credentials.json sync_config.json config.runtime.yml secrets.bin .env; do
+            if git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
+              echo "::error::Archivo prohibido rastreado: $f"
+              exit 1
+            fi
+          done
+          echo "Secret scan OK"
+
+      - name: Verificar que no hay binarios pesados rastreados
+        run: |
+          set -e
+          if git ls-files | grep -E "\.(exe|dll|dump|log)$" | grep -v -E "\.example\.|^scripts/" ; then
+            echo "::error::Binarios/artefactos rastreados:"
+            git ls-files | grep -E "\.(exe|dll|dump|log)$"
+            exit 1
+          fi
+          echo "OK: sin binarios rastreados"

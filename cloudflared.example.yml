@@ -1,0 +1,14 @@
+# Template de configuración del túnel. La app genera config.runtime.yml
+# en %ProgramData%\Meshweave\config\ con los valores de la UI.
+# El archivo credentials.json (TunnelSecret) lo gestiona la app: se guarda
+# cifrado con DPAPI y se materializa solo en tiempo de ejecución.
+
+tunnel: <TUNNEL_ID>
+credentials-file: <RUTA_CREDENCIALES_RUNTIME>
+logfile: <RUTA_LOG>
+loglevel: info
+
+ingress:
+  - hostname: <HOSTNAME>
+    service: http://127.0.0.1:<PUERTO_LOCAL>
+  - service: http_status:404

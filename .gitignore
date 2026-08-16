@@ -1,0 +1,48 @@
+# ── Secretos y credenciales (NUNCA subir) ─────────────────────────────
+credentials.json
+sync_config.json
+config.json
+config.runtime.yml
+*.secret
+secrets.bin
+.env
+*.pem
+*.key
+*.pfx
+
+# ── Datos de usuario / runtime (viven en %ProgramData%\Meshweave) ─────
+data/
+logs/
+backups/
+sync_state.json
+*.dump
+*.log
+*.jsonl
+
+# ── Binarios descargados ──────────────────────────────────────────────
+cloudflared.exe
+runtimes/
+
+# ── Entorno de desarrollo ─────────────────────────────────────────────
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# ── Artefactos de build / empaquetado ─────────────────────────────────
+build/
+dist/
+*.spec.bak
+installer/*.exe
+installer/*.zip
+
+# ── Editor / SO ───────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+desktop.ini

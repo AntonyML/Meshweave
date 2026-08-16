@@ -1,0 +1,67 @@
+{
+  "_comment": "Copia a %ProgramData%\\Meshweave\\config\\config.json o edita desde la pestaña Configuración. Los secretos van aparte (Credential Manager/DPAPI), nunca aquí.",
+
+  "tunnel": {
+    "hostname": "jobs.tonyml.com",
+    "local_port": 8000,
+    "tunnel_id": "",
+    "account_tag": "",
+    "log_level": "info"
+  },
+
+  "backend": {
+    "project_dir": "",
+    "command": "uvicorn app.main:app --host 127.0.0.1 --port 8000",
+    "env_file": "",
+    "health_url": "http://127.0.0.1:8000/health"
+  },
+
+  "database": {
+    "supabase_env": "E:\\Supabase\\supabase-project\\.env",
+    "cloud_db_url": "",
+    "batch_size": 200,
+    "batch_delay_seconds": 1.5,
+    "jitter_seconds": 1.0,
+    "max_retries": 4,
+    "backoff_base_seconds": 2,
+    "connect_timeout_seconds": 20,
+    "full_sync_tables": [
+      "ingest_jobs",
+      "ingested_jobs",
+      "group_health",
+      "alembic_version",
+      "alembic_version_ingest"
+    ],
+    "exclude_tables": []
+  },
+
+  "schedule": {
+    "sync_time": "01:00",
+    "sync_task_name": "MeshweaveSyncService",
+    "backup_time": "01:30",
+    "backup_task_name": "MeshweaveBackupService",
+    "backup_retention_days": 7
+  },
+
+  "alerts": {
+    "on_error": true,
+    "on_partial": true,
+    "min_interval_minutes": 60,
+    "summary_email": true,
+    "summary_min_interval_hours": 12,
+    "from_email": "",
+    "to_email": ""
+  },
+
+  "updates": {
+    "check_on_startup": true,
+    "channel": "stable",
+    "repo": "meshweave-app"
+  },
+
+  "logging": {
+    "level": "INFO",
+    "max_bytes": 10485760,
+    "backup_count": 5
+  }
+}
