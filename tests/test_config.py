@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sys
+
 import pytest
 
 from meshweave.config import DEFAULTS, cloud_db_url, load_config, save_config
@@ -45,6 +47,16 @@ def test_cloud_url_requires_components_and_password(tmp_path):
     cfg["cloud_db_name"] = "postgres"
     with pytest.raises(ConfigError):
         cloud_db_url(cfg)  # falta password en DPAPI
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="DPAPI es Windows-only")
+def test_cloud_url_uses_dpapi_password(tmp_path):
+    p = tmp_path / "config.json"
+    cfg = load_config(p)
+    cfg["cloud_db_host"] = "db.example.com"
+    cfg["cloud_db_user"] = "postgres.user"
+    cfg["cloud_db_port"] = 5432
+    cfg["cloud_db_name"] = "postgres"
     SecretStore().set("cloud_db_password", "sup3r")
     url = cloud_db_url(cfg)
     assert url.startswith("postgresql://postgres.user:")

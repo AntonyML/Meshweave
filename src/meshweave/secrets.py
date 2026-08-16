@@ -14,6 +14,7 @@ import base64
 import ctypes
 import json
 import os
+import sys
 from ctypes import wintypes
 from pathlib import Path
 
@@ -21,6 +22,13 @@ from meshweave.errors import SecretsError
 from meshweave.paths import secrets_path
 
 _CRYPTPROTECT_UI_FORBIDDEN = 0x1
+
+
+def _require_windows() -> None:
+    if not sys.platform.startswith("win"):
+        raise SecretsError(
+            "DPAPI (Windows Credential Protection) solo está disponible en Windows."
+        )
 
 
 class _DATA_BLOB(ctypes.Structure):
@@ -31,6 +39,7 @@ class _DATA_BLOB(ctypes.Structure):
 
 
 def _protect(data: bytes) -> bytes:
+    _require_windows()
     buf = ctypes.create_string_buffer(data, len(data))
     blob_in = _DATA_BLOB(len(data), ctypes.cast(buf, ctypes.POINTER(ctypes.c_char)))
     blob_out = _DATA_BLOB()
@@ -47,6 +56,7 @@ def _protect(data: bytes) -> bytes:
 
 
 def _unprotect(data: bytes) -> bytes:
+    _require_windows()
     buf = ctypes.create_string_buffer(data, len(data))
     blob_in = _DATA_BLOB(len(data), ctypes.cast(buf, ctypes.POINTER(ctypes.c_char)))
     blob_out = _DATA_BLOB()

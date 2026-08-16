@@ -10,7 +10,12 @@ permissions:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    # La app es Windows-only (DPAPI, Task Scheduler, ProgramData, sc.exe),
+    # así que la validación corre en el entorno real de destino.
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 
