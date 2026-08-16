@@ -375,8 +375,12 @@ def main(argv: list[str] | None = None) -> int:
         pass
 
     # Modo headless para Task Scheduler / CLI (Meshweave.exe sync run).
-    if argv and argv[0] in ("sync", "backup", "check", "status", "install",
-                            "uninstall", "alert-test", "summary-test"):
+    if argv and argv[0] in ("sync", "backup"):
+        from meshweave.workers import sync_worker
+        return sync_worker.main(argv[1:])
+    if argv and argv[0] in ("check", "run", "status", "install", "uninstall",
+                            "backup-install", "backup-uninstall", "alert-test",
+                            "summary-test"):
         from meshweave.workers import sync_worker
         return sync_worker.main(argv)
 

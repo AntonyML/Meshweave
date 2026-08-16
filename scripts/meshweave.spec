@@ -2,10 +2,18 @@
 """PyInstaller spec — Meshweave.exe (GUI sin consola).
 
 Uso: pyinstaller --noconfirm scripts/meshweave.spec
+
+Los paths se resuelven de forma ABSOLUTA respecto al directorio del spec
+(PyInstaller interpreta las rutas del script como relativas a él, no al repo).
 """
+from pathlib import Path
+
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 block_cipher = None
+
+# Directorio raíz del proyecto = padre del directorio donde vive el spec.
+ROOT = Path(SPECPATH).resolve().parent
 
 hiddenimports = collect_submodules("meshweave") + [
     "meshweave.workers.sync_worker",  # modo headless (import diferido)
@@ -20,8 +28,8 @@ hiddenimports = collect_submodules("meshweave") + [
 datas = collect_data_files("customtkinter")
 
 a = Analysis(
-    ["src/meshweave/app.py"],
-    pathex=["src"],
+    [str(ROOT / "src" / "meshweave" / "app.py")],
+    pathex=[str(ROOT / "src")],
     binaries=[],
     datas=datas,
     hiddenimports=hiddenimports,
