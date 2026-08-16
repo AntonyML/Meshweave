@@ -96,7 +96,7 @@ class BackendView:
             port = int(cfg.get("tunnel_local_port", 8000))
             api = ping_url(f"http://127.0.0.1:{port}")
             ingest = ping_url("http://localhost:8001")
-            self.app.after(0, lambda: self._apply_health(api, ingest))
+            self.app.post(lambda: self._apply_health(api, ingest))
         threading.Thread(target=_go, daemon=True).start()
 
     def _apply_health(self, api: bool, ingest: bool):

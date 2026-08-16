@@ -107,7 +107,7 @@ class DiagnosticsView:
                               f"{free / 1024 ** 3:.1f} GB libres de {total / 1024 ** 3:.1f} GB", "ok"))
             except Exception:  # noqa: BLE001
                 pass
-            self.app.after(0, lambda: self._apply_checks(lines))
+            self.app.post(lambda: self._apply_checks(lines))
 
         threading.Thread(target=_go, daemon=True).start()
 
@@ -133,7 +133,7 @@ class DiagnosticsView:
                 latest = cloudflared_manager.latest_release().get("tag_name")
             except Exception:  # noqa: BLE001
                 pass
-            self.app.after(0, lambda: self._apply_version(ver, latest))
+            self.app.post(lambda: self._apply_version(ver, latest))
 
         threading.Thread(target=_go, daemon=True).start()
 
@@ -152,9 +152,9 @@ class DiagnosticsView:
 
         def _go():
             ok, msg = cloudflared_manager.download()
-            self.app.after(0, lambda: (self.btn_download.configure(state="normal", text="⬇  Descargar / instalar"),
-                                       self._check_version(),
-                                       self.app.toast(msg, "ok" if ok else "err")))
+            self.app.post(lambda: (self.btn_download.configure(state="normal", text="⬇  Descargar / instalar"),
+                                   self._check_version(),
+                                   self.app.toast(msg, "ok" if ok else "err")))
 
         threading.Thread(target=_go, daemon=True).start()
 
@@ -178,8 +178,8 @@ class DiagnosticsView:
             lines.append("")
             lines.append(f"cloudflared: {cloudflared_manager.installed_version() or 'no instalado'}")
             report = "\n".join(lines)
-            self.app.after(0, lambda: (self.append("Diagnóstico exportado al portapapeles:", "ok"),
-                                       self.append(redact(report), "dim")))
+            self.app.post(lambda: (self.append("Diagnóstico exportado al portapapeles:", "ok"),
+                                   self.append(redact(report), "dim")))
             try:
                 import subprocess
                 subprocess.run(["clip"], input=report.encode("utf-16le"),

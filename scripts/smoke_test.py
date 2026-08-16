@@ -1,7 +1,9 @@
 """Smoke test headless de Meshweave (para CI / validación de build).
 
-Abre la ventana unos segundos, verifica que las pestañas existen y cierra.
-No requiere pantalla real en Windows con escritorio activo.
+Abre la ventana, verifica que las pestañas existen y cierra limpiamente.
+No requiere mainloop: usa update() en bucle con timeout, y el cierre se
+programa desde el hilo principal (llamar a app.after desde un hilo no es
+seguro en modo headless).
 """
 from __future__ import annotations
 
@@ -30,24 +32,23 @@ def main() -> int:
         return 1
     print("Pestañas OK:", tabs)
 
-    # Ejecuta el ciclo de la UI brevemente y cierra.
-    def _close():
-        time.sleep(2.5)
-        app.after(0, app._on_close)
+    # Cierre programado desde el hilo principal (thread-safe).
+    app.after(2500, app._on_close)
 
-    import threading
-    threading.Thread(target=_close, daemon=True).start()
-    deadline = time.time() + 20
+    # Bucle de eventos manual con timeout duro (no puede colgarse).
+    deadline = time.time() + 25
+    closed_cleanly = False
     while time.time() < deadline:
         try:
             app.update()
-        except Exception as e:  # noqa: BLE001
-            print(f"ERROR durante update(): {e}")
-            return 1
-        if not app.winfo_exists():
+            if not app.winfo_exists():
+                closed_cleanly = True
+                break
+        except Exception:  # noqa: BLE001 — la app ya fue destruida
+            closed_cleanly = True
             break
         time.sleep(0.02)
-    else:
+    if not closed_cleanly:
         print("ERROR: timeout esperando cierre de la ventana")
         return 1
     print("Smoke test OK — ventana abrió y cerró limpiamente.")

@@ -212,7 +212,12 @@ def main(argv: list[str] | None = None) -> int:
         "alert-test": cmd_alert_test,
         "summary-test": cmd_summary_test,
     }
-    return handlers[args.cmd](args)
+    try:
+        return handlers[args.cmd](args)
+    except Exception as e:  # noqa: BLE001 — error legible sin traceback en CI/logs
+        from meshweave.logging_setup import redact
+        print(f"Error: {redact(str(e))}")
+        return 1
 
 
 if __name__ == "__main__":

@@ -45,15 +45,15 @@ class Actions:
         def _go():
             cfg = load_config()
             ok, msg = self.app.tunnel.start(cfg)
-            self.app.after(0, lambda: (self.app.toast(msg, "ok" if ok else "err"),
-                                       self.app.refresh_views()))
+            self.app.post(lambda: (self.app.toast(msg, "ok" if ok else "err"),
+                                   self.app.refresh_views()))
         threading.Thread(target=_go, daemon=True).start()
 
     def tunnel_stop(self):
         def _go():
             ok, msg = self.app.tunnel.stop()
-            self.app.after(0, lambda: (self.app.toast(msg, "ok" if ok else "err"),
-                                       self.app.refresh_views()))
+            self.app.post(lambda: (self.app.toast(msg, "ok" if ok else "err"),
+                                   self.app.refresh_views()))
         threading.Thread(target=_go, daemon=True).start()
 
     def tunnel_restart(self):
@@ -61,8 +61,8 @@ class Actions:
             self.app.tunnel.stop()
             cfg = load_config()
             ok, msg = self.app.tunnel.start(cfg)
-            self.app.after(0, lambda: (self.app.toast(msg, "ok" if ok else "err"),
-                                       self.app.refresh_views()))
+            self.app.post(lambda: (self.app.toast(msg, "ok" if ok else "err"),
+                                   self.app.refresh_views()))
         threading.Thread(target=_go, daemon=True).start()
 
     # ── Servicio de Windows (cloudflared) ──
@@ -72,10 +72,10 @@ class Actions:
             try:
                 r = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
                 out = (r.stdout or r.stderr or "").strip()
-                self.app.after(0, lambda: self.app.toast(out or f"código {r.returncode}",
-                                                         "ok" if r.returncode == 0 else "err"))
+                self.app.post(lambda: self.app.toast(out or f"código {r.returncode}",
+                                                     "ok" if r.returncode == 0 else "err"))
             except Exception as e:  # noqa: BLE001
-                self.app.after(0, lambda: self.app.toast(str(e), "err"))
+                self.app.post(lambda: self.app.toast(str(e), "err"))
         threading.Thread(target=_go, daemon=True).start()
 
     def service_install(self) -> tuple[bool, str]:
@@ -129,15 +129,15 @@ class Actions:
                 __import__("pathlib").Path(project),
                 cfg.get("backend_command") or None,
             )
-            self.app.after(0, lambda: (self.app.toast(msg, "ok" if ok else "err"),
-                                       self.app.refresh_views()))
+            self.app.post(lambda: (self.app.toast(msg, "ok" if ok else "err"),
+                                   self.app.refresh_views()))
         threading.Thread(target=_go, daemon=True).start()
 
     def backend_stop(self):
         def _go():
             ok, msg = self.app.backend.stop()
-            self.app.after(0, lambda: (self.app.toast(msg, "ok" if ok else "err"),
-                                       self.app.refresh_views()))
+            self.app.post(lambda: (self.app.toast(msg, "ok" if ok else "err"),
+                                   self.app.refresh_views()))
         threading.Thread(target=_go, daemon=True).start()
 
     # ── Sync ──
@@ -173,15 +173,15 @@ class Actions:
     def sync_install_tasks(self):
         def _go():
             ok, msg = self.app.sync.install_tasks()
-            self.app.after(0, lambda: (self.app.toast(msg, "ok" if ok else "err"),
-                                       self.app.sync.refresh()))
+            self.app.post(lambda: (self.app.toast(msg, "ok" if ok else "err"),
+                                   self.app.sync.refresh()))
         threading.Thread(target=_go, daemon=True).start()
 
     def sync_uninstall_tasks(self):
         def _go():
             ok, msg = self.app.sync.uninstall_tasks()
-            self.app.after(0, lambda: (self.app.toast(msg, "ok" if ok else "err"),
-                                       self.app.sync.refresh()))
+            self.app.post(lambda: (self.app.toast(msg, "ok" if ok else "err"),
+                                   self.app.sync.refresh()))
         threading.Thread(target=_go, daemon=True).start()
 
     def sync_test_alert(self):
@@ -218,7 +218,11 @@ class App(ctk.CTk):
         self._build_tabs()
         self._toast_lbl = None
         self._poll()
-        self.after(1500, self.sync.refresh)
+        self.after(1500, self._initial_sync_refresh)
+
+    def _initial_sync_refresh(self):
+        if not getattr(self, "_destroyed", False):
+            self.sync.refresh()
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
@@ -271,7 +275,21 @@ class App(ctk.CTk):
 
     # ── Loop principal ──
 
+    def post(self, fn) -> None:
+        """Ejecuta `fn` en el hilo principal de forma segura.
+
+        `app.after()` desde un hilo de trabajo no es thread-safe (en modo
+        headless/CI lanza "main thread is not in main loop"). Aquí se enruta
+        por la cola y el bucle principal lo ejecuta.
+        """
+        if threading.current_thread() is threading.main_thread():
+            fn()
+        else:
+            self._q.put(("call", fn))
+
     def _poll(self):
+        if getattr(self, "_destroyed", False):
+            return
         self._tick = getattr(self, "_tick", 0) + 1
         try:
             while True:
@@ -281,10 +299,16 @@ class App(ctk.CTk):
             pass
         # Refresco periódico de estado (cada ~10 s).
         if self._tick % 40 == 0:
-            self.refresh_views()
+            try:
+                self.refresh_views()
+            except Exception:  # noqa: BLE001 — la ventana puede estar cerrándose
+                pass
         self.after(250, self._poll)
 
     def _dispatch(self, item):
+        if item[0] == "call":
+            item[1]()
+            return
         kind = item[0]
         if kind == "tunnel":
             self.dashboard.append(item[1], "info")
@@ -329,9 +353,14 @@ class App(ctk.CTk):
         color = {"ok": C["ok"], "err": C["err"], "warn": C["warn"]}.get(level, C["info"])
         if self._toast_lbl:
             self._toast_lbl.configure(text=msg, text_color=color)
-            self.after(8000, lambda: self._toast_lbl.configure(text=""))
+            self.after(8000, self._clear_toast)
+
+    def _clear_toast(self):
+        if not getattr(self, "_destroyed", False) and self._toast_lbl:
+            self._toast_lbl.configure(text="")
 
     def _on_close(self):
+        self._destroyed = True
         self.tunnel.terminate()
         self.backend.terminate()
         self.destroy()
