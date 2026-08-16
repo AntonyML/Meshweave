@@ -40,11 +40,12 @@ jobs:
         run: |
           set -e
           # Patrones de credenciales que NUNCA deben estar en el repo.
-          if git grep -n -I -E \
-            "(BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AIza[0-9A-Za-z_-]{35}|ghp_[0-9A-Za-z]{36}|AKIA[0-9A-Z]{16}|postgres(ql)?://[^/]*:[^@/]*@)" \
-            -- . ':!*.md' ':!*.example.json' ':!.github' >/dev/null 2>&1; then
+          # El patrón de URLs exige usuario literal (no {placeholders}):
+          # los f-strings que construyen la URL en runtime no deben contar.
+          PATTERN="(BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AIza[0-9A-Za-z_-]{35}|ghp_[0-9A-Za-z]{36}|AKIA[0-9A-Z]{16}|postgres(ql)?://[A-Za-z0-9._%+-]+:[^@/]+@)"
+          if git grep -n -I -E "$PATTERN" -- . ':!*.md' ':!*.example.json' ':!.github' >/dev/null 2>&1; then
             echo "::error::Se encontraron patrones de secretos en el repo."
-            git grep -n -I -E "(BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AIza[0-9A-Za-z_-]{35}|ghp_[0-9A-Za-z]{36}|AKIA[0-9A-Z]{16}|postgres(ql)?://[^/]*:[^@/]*@)" -- . ':!*.md' ':!*.example.json' ':!.github'
+            git grep -n -I -E "$PATTERN" -- . ':!*.md' ':!*.example.json' ':!.github'
             exit 1
           fi
           # Archivos de credenciales prohibidos en el árbol de Git.
