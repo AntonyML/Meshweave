@@ -3,9 +3,9 @@
 Centro de control local para Windows: túnel Cloudflare, backend FastAPI,
 sincronización Docker → Supabase Cloud, backups del dump y alertas por email.
 
-> Antes se llamaba *TunnelCloudFlare* (prototipo en `E:\Dev\Herramientas\TunnelCloudFlare`).
-> Meshweave es la reestructuración: paquete Python ordenado, datos fuera del
-> código, secretos cifrados con DPAPI y camino hacia un instalador distribuible.
+> Reestructuración del prototipo *TunnelCloudFlare* (ya eliminado): paquete
+> Python ordenado, datos fuera del código, secretos cifrados con DPAPI y
+> camino hacia un instalador distribuible.
 
 ## Arquitectura
 
@@ -33,7 +33,7 @@ Email (Resend): alerta de fallo o resumen diario
 src/meshweave/
 ├── app.py                # ventana principal + modo headless
 ├── paths.py              # %ProgramData%\Meshweave / %LOCALAPPDATA%\Meshweave
-├── config.py             # config pública (atómica) + migración legacy
+├── config.py             # config pública (atómica), sin secretos
 ├── secrets.py            # almacén DPAPI (nunca JSON en claro)
 ├── logging_setup.py      # log rotativo + redacción de credenciales
 ├── process_runner.py     # procesos controlados (PID, timeouts, huérfanos)
@@ -107,13 +107,15 @@ Edítala desde la pestaña **Configuración** (guarda de forma atómica con
 respaldo `.bak`). Los secretos se escriben en el almacén DPAPI desde la misma
 pestaña.
 
-## Migración desde TunnelCloudFlare
+## Primera instalación (nueva PC)
 
-En el primer arranque, Meshweave migra automáticamente (una sola vez) desde
-`E:\Dev\Herramientas\TunnelCloudFlare`:
-- `cloud_db_url` → componentes en `config.json` + password a **DPAPI**.
-- `credentials.json` → `TunnelSecret` a DPAPI; `TunnelID`/`AccountTag` a config.
-- `sync_state.json` (watermarks), historial y últimos dumps → carpetas nuevas.
+1. Instala y abre Meshweave → el **asistente de primera configuración** te guía:
+   túnel Cloudflare, backend (opcional), Supabase (local + nube) y alertas.
+2. Si falta `cloudflared`, descárgalo desde el asistente o la pestaña
+   **Diagnóstico** (GitHub Releases → `%ProgramData%\Meshweave\bin\`, verificado).
+3. Instala las tareas desde **Sincronización** (01:00 sync / 01:30 backup).
+4. Si la PC nueva tiene la DB local vacía, usa **Backups → Restaurar dump**
+   para traer los datos desde un dump de la nube (una sola vez).
 
 ## Empaquetado y releases
 

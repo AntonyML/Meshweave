@@ -4,8 +4,6 @@
   (hosts, puertos, horarios, tamaños de lote…). NUNCA contraseñas.
 - Secretos aparte, en el almacén DPAPI (meshweave.secrets).
 - Escritura atómica: temp → validar → os.replace + respaldo .bak.
-- Migración única desde la instalación legacy (TunnelCloudFlare) para que el
-  sync nocturno continúe sin perder watermarks ni historial.
 """
 from __future__ import annotations
 
@@ -14,13 +12,11 @@ import os
 import shutil
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
 
 from meshweave.errors import ConfigError
 from meshweave.paths import (
     backups_dir,
     config_dir,
-    ensure_dirs,
     logs_dir,
     state_dir,
 )
@@ -42,8 +38,9 @@ DEFAULT_FULL_SYNC_TABLES = [
 
 # Claves públicas por defecto (sin secretos).
 DEFAULTS: dict[str, Any] = {
-    # Túnel
-    "tunnel_hostname": "jobs.tonyml.com",
+    # Túnel — vacíos por defecto: cada instalación configura los suyos
+    # (asistente de primera configuración o pestaña Configuración).
+    "tunnel_hostname": "",
     "tunnel_local_port": 8000,
     "tunnel_id": "",
     "account_tag": "",
@@ -53,8 +50,9 @@ DEFAULTS: dict[str, Any] = {
     "backend_command": "",
     "backend_env_file": "",
     "backend_health_url": "http://127.0.0.1:8000/health",
-    # Base de datos local (Docker self-hosted)
-    "supabase_env": r"E:\Supabase\supabase-project\.env",
+    # Base de datos local (Docker self-hosted) — ruta configurable, sin default
+    # con rutas del desarrollador.
+    "supabase_env": "",
     # Base de datos nube — componentes públicos; el password va a DPAPI.
     "cloud_db_host": "",
     "cloud_db_port": 5432,
@@ -107,6 +105,12 @@ def load_config(path: Path = CONFIG_PATH) -> dict[str, Any]:
         except (OSError, json.JSONDecodeError) as e:
             raise ConfigError(f"No se pudo leer {path.name}: {e}") from e
     return cfg
+
+
+def is_first_run(cfg: dict[str, Any] | None = None) -> bool:
+    """True si la instalación aún no está configurada (dispara el asistente)."""
+    cfg = cfg or load_config()
+    return not (cfg.get("tunnel_id") or cfg.get("cloud_db_host") or cfg.get("supabase_env"))
 
 
 def save_config(cfg: dict[str, Any], path: Path = CONFIG_PATH) -> None:
@@ -181,97 +185,3 @@ def save_state(state: dict[str, Any], path: Path = STATE_PATH) -> None:
     tmp = path.with_suffix(".tmp")
     tmp.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
     os.replace(tmp, path)
-
-
-# ── Migración única desde TunnelCloudFlare (legacy) ─────────────────────────
-# La carpeta legacy conserva sync_config.json (con la URL completa de la nube),
-# sync_state.json (watermarks) y el historial. Copiamos lo que aporta y el
-# password va a DPAPI. Se ejecuta una sola vez (marcador en config dir).
-
-_LEGACY_DIR = Path(r"E:\Dev\Herramientas\TunnelCloudFlare")
-_MIGRATION_MARKER = config_dir() / ".migrated_from_legacy"
-
-
-def migrate_legacy(legacy_dir: Path = _LEGACY_DIR) -> bool:
-    """Importa config/estado/historial desde la instalación legacy. Idempotente."""
-    ensure_dirs()
-    if _MIGRATION_MARKER.exists():
-        return False
-    src_cfg = legacy_dir / "sync_config.json"
-    if not src_cfg.exists():
-        return False
-    try:
-        data = json.loads(src_cfg.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return False
-
-    cfg = load_config()
-    # URL de la nube → componentes + password a DPAPI (una sola vez).
-    url = data.get("cloud_db_url") or ""
-    parsed = urlparse(url)
-    if parsed.username and parsed.password:
-        SecretStore().set("cloud_db_password", parsed.password)
-        cfg["cloud_db_host"] = parsed.hostname or cfg["cloud_db_host"]
-        cfg["cloud_db_port"] = parsed.port or cfg["cloud_db_port"]
-        cfg["cloud_db_name"] = (parsed.path.lstrip("/") or cfg["cloud_db_name"])
-        cfg["cloud_db_user"] = parsed.username
-    # El resto de claves públicas que existan en el legacy.
-    for key in (
-        "supabase_env", "batch_size", "batch_delay_seconds", "jitter_seconds",
-        "max_retries", "backoff_base_seconds", "connect_timeout_seconds",
-        "schedule_time", "backup_time", "backup_retention_days", "backup_container",
-        "alert_on_error", "alert_on_partial", "alert_min_interval_minutes",
-        "summary_email", "summary_min_interval_hours", "full_sync_tables",
-        "exclude_tables",
-    ):
-        if key in data and data[key] is not None:
-            cfg[key] = data[key]
-    # Tareas: nuevos nombres Meshweave (no heredar los viejos nombres).
-    # Ruta del backend desde backend.config.json legacy.
-    legacy_backend = legacy_dir / "backend.config.json"
-    try:
-        bdata = json.loads(legacy_backend.read_text(encoding="utf-8"))
-        if bdata.get("project_dir"):
-            cfg["backend_project_dir"] = bdata["project_dir"]
-    except (OSError, json.JSONDecodeError):
-        pass
-    # Credenciales del túnel: TunnelSecret → DPAPI; AccountTag/TunnelID → config.
-    legacy_creds = legacy_dir / "credentials.json"
-    try:
-        cdata = json.loads(legacy_creds.read_text(encoding="utf-8"))
-        if cdata.get("TunnelSecret"):
-            SecretStore().set("tunnel_secret", cdata["TunnelSecret"])
-        if cdata.get("AccountTag"):
-            cfg["account_tag"] = cdata["AccountTag"]
-        if cdata.get("TunnelID") and not cfg.get("tunnel_id"):
-            cfg["tunnel_id"] = cdata["TunnelID"]
-    except (OSError, json.JSONDecodeError):
-        pass
-    save_config(cfg)
-
-    # Estado (watermarks) e historial → carpetas nuevas.
-    for name, dest in (
-        ("sync_state.json", STATE_PATH),
-        ("sync_runs.jsonl", RUNS_LOG),
-        ("backup_runs.jsonl", BACKUP_RUNS_LOG),
-    ):
-        src = legacy_dir / name
-        if src.exists():
-            try:
-                shutil.copy2(src, dest)
-            except OSError:
-                pass
-    # Últimos dumps (solo los recientes, sin pasarse de la retención).
-    try:
-        retention = int(cfg.get("backup_retention_days", 7))
-        import time
-        cutoff = time.time() - retention * 86400
-        for f in sorted((legacy_dir / "backups").glob("cloud-*.dump"))[-retention:]:
-            if f.stat().st_mtime >= cutoff:
-                shutil.copy2(f, BACKUPS_DIR / f.name)
-    except OSError:
-        pass
-
-    _MIGRATION_MARKER.parent.mkdir(parents=True, exist_ok=True)
-    _MIGRATION_MARKER.write_text("1", encoding="utf-8")
-    return True

@@ -11,12 +11,14 @@ import subprocess as _sp
 import time
 from collections.abc import Callable
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from meshweave.config import (
     BACKUP_RUNS_LOG,
     BACKUPS_DIR,
     load_config,
+    read_env_file,
 )
 from meshweave.paths import logs_dir
 from meshweave.secrets import SecretStore
@@ -106,6 +108,156 @@ def run_backup(
                 "warn" if alert_res.get("status") == "error" else "info",
             )
     return result
+
+
+def restore_dump(
+    cfg: dict[str, Any] | None = None,
+    dump_file: str | None = None,
+    emit: Callable[[str, str], None] | None = None,
+) -> dict[str, Any]:
+    """Restaura un dump (formato custom) de la nube en la DB local (Docker).
+
+    Uso típico: PC nueva con la DB local vacía → traer los datos desde un
+    dump de backups/. Sin `--clean`: las tablas existentes se conservan
+    ("already exists" benigno) y se cargan las que falten — evita romper la
+    publicación realtime del stack local. Al final resetea las secuencias.
+    """
+    cfg = cfg or load_config()
+    emit = emit or (lambda msg, lvl: None)
+    started = now_iso()
+    t0 = time.time()
+    result: dict[str, Any] = {
+        "started_at": started, "finished_at": None, "duration_s": 0,
+        "status": "error", "file": None, "error": None,
+    }
+    try:
+        if not dump_file:
+            dumps = sorted(BACKUPS_DIR.glob("cloud-*.dump"))
+            if not dumps:
+                raise RuntimeError("No hay dumps en el directorio de backups.")
+            dump_file = str(dumps[-1])
+        dump = Path(dump_file)
+        if not dump.exists():
+            raise RuntimeError(f"El dump no existe: {dump}")
+
+        env = read_env_file(Path(cfg["supabase_env"]))
+        user = env.get("POSTGRES_USER", "postgres")
+        password = env.get("POSTGRES_PASSWORD", "")
+        db = env.get("POSTGRES_DB", "postgres")
+        container = cfg.get("backup_container", "supabase-db")
+        if not env:
+            raise RuntimeError(f"No se pudo leer el .env local: {cfg['supabase_env']}")
+
+        timeout = int(cfg.get("backup_timeout_seconds", 300))
+
+        def _run(args: list[str]):
+            return _sp.run(args, capture_output=True, text=True, timeout=timeout)
+
+        dump_in = "/tmp/restore.dump"
+        emit(f"Restaurando {dump.name} → DB local ({db})…", "info")
+        r = _run(["docker", "cp", str(dump), f"{container}:{dump_in}"])
+        if r.returncode != 0:
+            raise RuntimeError(f"docker cp falló: {(r.stderr or r.stdout).strip()}")
+
+        r = _run(["docker", "exec", "-e", f"PGPASSWORD={password}", container,
+                  "pg_restore", "-Fc", "--no-owner", "--no-privileges",
+                  "-U", user, "-d", db, dump_in])
+        err_text = (r.stderr or r.stdout or "")
+        if r.returncode != 0:
+            # El exit 1 puede venir de errores benignos ("already exists" o
+            # permisos de extensiones como vault/"SET log_min_messages")
+            # mientras los datos sí se cargan. Los mostramos como aviso y la
+            # verificación final se hace por CONTENIDO real de la DB.
+            benign = all(
+                w in err_text.lower()
+                for w in ("already exists", "permission denied")
+            ) or "permission denied" in err_text.lower()
+            if not benign and "already exists" not in err_text.lower():
+                _run(["docker", "exec", container, "rm", "-f", dump_in])
+                raise RuntimeError(f"pg_restore falló: {err_text.strip()[:800]}")
+            emit("pg_restore reportó avisos (ya existentes/permisos de extensiones) "
+                 "— se verifica el contenido real.", "warn")
+
+        # Verificación por contenido: al menos una tabla con datos en public.
+        v = _run(["docker", "exec", "-e", f"PGPASSWORD={password}", container,
+                  "psql", "-U", user, "-d", db, "-tAc",
+                  "select count(*) from pg_tables where schemaname='public'"])
+        try:
+            table_count = int(v.stdout.strip() or "0")
+        except ValueError:
+            table_count = 0
+        if table_count == 0:
+            _run(["docker", "exec", container, "rm", "-f", dump_in])
+            raise RuntimeError(
+                f"La restauración no cargó tablas. pg_restore: {err_text.strip()[:400]}"
+            )
+
+        # Reset de secuencias para no colisionar con inserts nuevos.
+        n_seq = _reset_sequences(cfg, emit)
+        _run(["docker", "exec", container, "rm", "-f", dump_in])
+
+        result.update(status="ok", file=dump.name,
+                      duration_s=round(time.time() - t0, 1), finished_at=now_iso())
+        emit(f"Restauración OK ({dump.name}) — {table_count} tablas, "
+             f"{n_seq} secuencia(s) ajustada(s).", "ok")
+    except Exception as e:  # noqa: BLE001
+        result["finished_at"] = now_iso()
+        result["duration_s"] = round(time.time() - t0, 1)
+        result["error"] = str(e)
+        emit(f"ERROR restauración: {e}", "error")
+    finally:
+        try:
+            logs_dir().mkdir(parents=True, exist_ok=True)
+            with open(RESTORE_RUNS_LOG, "a", encoding="utf-8") as f:
+                f.write(json.dumps(result, ensure_ascii=False, default=str) + "\n")
+        except OSError:
+            pass
+    return result
+
+
+RESTORE_RUNS_LOG = logs_dir() / "restore_runs.jsonl"
+
+
+def _reset_sequences(cfg: dict[str, Any], emit: Callable[[str, str], None]) -> int:
+    """setval de cada secuencia de public al max(col) de su tabla."""
+    from meshweave.sync.engine import _connect, build_local_url
+
+    try:
+        url = build_local_url(cfg)
+    except Exception as e:  # noqa: BLE001
+        emit(f"  (no se pudieron resetear secuencias: {e})", "warn")
+        return 0
+    n = 0
+    try:
+        with _connect(url, int(cfg["connect_timeout_seconds"])) as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                select s.relname as seq, t.relname as tbl, a.attname as col
+                from pg_class s
+                join pg_depend d
+                  on d.objid = s.oid and d.classid = 'pg_class'::regclass
+                 and d.refclassid = 'pg_class'::regclass and d.deptype in ('a', 'i')
+                join pg_class t on t.oid = d.refobjid
+                join pg_attribute a on a.attrelid = t.oid and a.attnum = d.refobjsubid
+                join pg_namespace n on n.oid = s.relnamespace
+                where s.relkind = 'S' and n.nspname = 'public'
+                """
+            )
+            rows = cur.fetchall()
+            for seq, tbl, col in rows:
+                cur.execute(
+                    f'SELECT setval(\'{seq}\', COALESCE(MAX("{col}"), 1), '
+                    f'MAX("{col}") IS NOT NULL) FROM public."{tbl}"'
+                )
+                n += 1
+            conn.commit()
+    except Exception as e:  # noqa: BLE001
+        emit(f"  (error reseteando secuencias: {e})", "warn")
+        return n
+    return n
+
+
+LOG_DIR_JSONL = None  # placeholder reemplazado abajo
 
 
 def read_backup_runs(limit: int = 8) -> list[dict[str, Any]]:

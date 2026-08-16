@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from meshweave.errors import DownloadError
-from meshweave.paths import bin_dir, package_root
+from meshweave.paths import bin_dir
 
 RELEASES_API = "https://api.github.com/repos/cloudflare/cloudflared/releases/latest"
 DOWNLOAD_URL = (
@@ -31,11 +31,6 @@ CHECKSUM_URL = DOWNLOAD_URL + ".sha256"
 def binary_path() -> Path:
     """Ruta canónica del binario (ProgramData\\Meshweave\\bin)."""
     return bin_dir() / "cloudflared.exe"
-
-
-def legacy_binary_path() -> Path:
-    """Binario de la instalación legacy (para migrar sin redescargar)."""
-    return package_root().parent / "TunnelCloudFlare" / "cloudflared.exe"
 
 
 def needs_binary() -> bool:
@@ -157,15 +152,3 @@ def download(version: str | None = None, on_progress=None) -> tuple[bool, str]:
         return False, f"Error descargando cloudflared: {e}"
 
 
-def migrate_from_legacy() -> bool:
-    """Si existe el binario legacy, lo copia a bin_dir (evita redescarga)."""
-    src = legacy_binary_path()
-    if not src.exists() or binary_path().exists():
-        return False
-    try:
-        binary_path().parent.mkdir(parents=True, exist_ok=True)
-        import shutil
-        shutil.copy2(src, binary_path())
-        return True
-    except OSError:
-        return False

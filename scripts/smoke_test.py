@@ -16,6 +16,8 @@ import time
 os.environ["MESHWEAVE_DATA_DIR"] = os.environ.get(
     "MESHWEAVE_DATA_DIR", os.path.join(tempfile.mkdtemp(prefix="meshweave-smoke-"), "data")
 )
+# En CI/headless no se muestra el asistente de primera configuración.
+os.environ["MESHWEAVE_SKIP_WIZARD"] = "1"
 
 EXPECTED_TABS = ["Dashboard", "Túnel", "Backend", "Sincronización", "Backups",
                  "Configuración", "Logs", "Diagnóstico"]

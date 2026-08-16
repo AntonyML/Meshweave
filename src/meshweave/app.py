@@ -5,6 +5,7 @@ No toca subprocess, psycopg ni configs directamente.
 """
 from __future__ import annotations
 
+import os
 import queue
 import subprocess
 import sys
@@ -14,7 +15,7 @@ import customtkinter as ctk
 
 from meshweave import APP_NAME, __version__
 from meshweave import sync as sync_mod
-from meshweave.config import load_config, migrate_legacy, save_config
+from meshweave.config import is_first_run, load_config, save_config
 from meshweave.paths import ensure_dirs
 from meshweave.services.backend_service import BackendService
 from meshweave.services.sync_service import SyncService
@@ -369,10 +370,6 @@ class App(ctk.CTk):
 def main(argv: list[str] | None = None) -> int:
     argv = argv if argv is not None else sys.argv[1:]
     ensure_dirs()
-    try:
-        migrate_legacy()
-    except Exception:  # noqa: BLE001 — la migración es best-effort
-        pass
 
     # Modo headless para Task Scheduler / CLI (Meshweave.exe sync run).
     if argv and argv[0] in ("sync", "backup"):
@@ -384,7 +381,14 @@ def main(argv: list[str] | None = None) -> int:
         from meshweave.workers import sync_worker
         return sync_worker.main(argv)
 
-    App().mainloop()
+    app = App()
+    # Asistente de primera configuración (solo si la config está vacía y no
+    # se desactiva explícitamente, p.ej. CI con MESHWEAVE_SKIP_WIZARD=1).
+    if not os.environ.get("MESHWEAVE_SKIP_WIZARD") and is_first_run():
+        from meshweave.ui.wizard import run_first_run_wizard
+        if run_first_run_wizard(app):
+            app.sync.refresh()
+    app.mainloop()
     return 0
 
 

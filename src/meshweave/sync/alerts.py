@@ -48,7 +48,9 @@ def resolve_alert_settings(cfg: dict[str, Any]) -> dict[str, str] | None:
     if not key:
         key = env.get("RESEND_API_KEY", "").strip()
     if not from_email:
-        from_email = env.get("RESEND_FROM_EMAIL", "hello@tonyml.com").strip()
+        # Sin default personal: el remitente debe venir de config.json o del
+        # .env del backend, nunca un dominio hardcodeado del desarrollador.
+        from_email = env.get("RESEND_FROM_EMAIL", "").strip()
     if not to_email:
         to_email = env.get("ADMIN_EMAIL", "").strip()
     if not key or not to_email or not from_email:

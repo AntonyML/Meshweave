@@ -23,7 +23,7 @@ from collections.abc import Callable
 
 from meshweave import __version__, windows_tasks
 from meshweave import sync as sync_mod
-from meshweave.config import load_config, load_state, migrate_legacy
+from meshweave.config import load_config, load_state
 
 # ── Logging ─────────────────────────────────────────────────────────────────
 
@@ -146,6 +146,18 @@ def cmd_backup_uninstall(args) -> int:
     return 0 if ok else 1
 
 
+def cmd_restore(args) -> int:
+    """Restaura un dump (nube → DB local). `dump` = nombre o ruta; vacío = el último."""
+    _setup_logging()
+    cfg = load_config()
+    result = sync_mod.restore_dump(cfg, args.dump, emit=emit_cli)
+    print(f"\nRestauración: {result.get('status')} | {result.get('file', '—')}")
+    if result.get("error"):
+        print(f"Error: {result['error']}")
+        return 1
+    return 0 if result.get("status") == "ok" else 1
+
+
 def cmd_alert_test(args) -> int:
     _setup_logging()
     cfg = load_config()
@@ -181,6 +193,9 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("backup", help="backup del dump de la nube ahora")
     sub.add_parser("backup-install", help="crea la tarea de backup (MeshweaveBackupService)")
     sub.add_parser("backup-uninstall", help="elimina la tarea de backup")
+    p_restore = sub.add_parser("restore", help="restaura un dump en la DB local (nube → Docker)")
+    p_restore.add_argument("dump", nargs="?", default=None,
+                           help="nombre o ruta del dump (vacío = el último de backups/)")
     sub.add_parser("alert-test", help="email de prueba (Resend)")
     sub.add_parser("summary-test", help="prueba del resumen diario")
 
@@ -188,15 +203,6 @@ def main(argv: list[str] | None = None) -> int:
     if not args.cmd:
         parser.print_help()
         return 0
-
-    # Migración única desde TunnelCloudFlare (si existe) antes de cualquier uso.
-    try:
-        migrated = migrate_legacy()
-        if migrated:
-            print("Migración única desde TunnelCloudFlare completada "
-                  "(config + secretos DPAPI + historial).")
-    except Exception as e:  # noqa: BLE001
-        print(f"AVISO: migración legacy no aplicada: {e}")
 
     handlers = {
         "check": cmd_check,
@@ -207,6 +213,7 @@ def main(argv: list[str] | None = None) -> int:
         "backup": cmd_backup,
         "backup-install": cmd_backup_install,
         "backup-uninstall": cmd_backup_uninstall,
+        "restore": cmd_restore,
         "alert-test": cmd_alert_test,
         "summary-test": cmd_summary_test,
     }

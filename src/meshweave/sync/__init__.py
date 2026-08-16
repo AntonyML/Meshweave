@@ -13,12 +13,12 @@ from meshweave.sync.alerts import (
     send_test_alert,
     send_test_summary,
 )
-from meshweave.sync.backup import read_backup_runs, run_backup
+from meshweave.sync.backup import read_backup_runs, restore_dump, run_backup
 from meshweave.sync.engine import SyncEngine, build_local_url, check_connections
 
 __all__ = [
     "SyncEngine", "build_local_url", "check_connections",
-    "run_backup", "read_backup_runs",
+    "run_backup", "read_backup_runs", "restore_dump",
     "resolve_alert_settings", "send_email", "send_test_alert", "send_test_summary",
     "maybe_send_failure_alert", "maybe_send_summary",
     "run", "read_runs", "load_config", "load_state",

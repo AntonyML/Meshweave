@@ -31,6 +31,14 @@ class BackupsView:
         btn(brow, "💾  Backup ahora", self.app.actions.sync_backup_now, "ok").pack(side="left", padx=4)
         btn(brow, "🔍  Validar dumps", self._validate, "border").pack(side="left", padx=4)
         btn(brow, "📂  Abrir carpeta", self._open_dir, "border").pack(side="left", padx=4)
+        self.dump_combo = ctk.CTkComboBox(brow, width=200, state="readonly")
+        self.dump_combo.pack(side="left", padx=(14, 4))
+        btn(brow, "♻  Restaurar en local", self._restore, "err").pack(side="left", padx=4)
+        ctk.CTkLabel(top, text="Restaurar reescribe la DB local (Docker) con el contenido del dump "
+                                "de la nube — para arrancar una PC nueva o recuperar una DB local "
+                                "dañada. No toca la nube.",
+                     font=ctk.CTkFont(*FONT_UI), text_color=C["warn"], wraplength=860,
+                     anchor="w", justify="left").pack(anchor="w", padx=14, pady=(0, 8))
 
         out = card(parent)
         out.grid(row=1, column=0, sticky="nsew", padx=6, pady=(3, 6))
@@ -51,6 +59,39 @@ class BackupsView:
         d = backups_dir()
         d.mkdir(parents=True, exist_ok=True)
         os.startfile(d)
+
+    def _restore(self):
+        from tkinter import messagebox
+
+        dump = self.dump_combo.get()
+        if not dump:
+            self.append("Selecciona un dump de la lista para restaurar.", "warn")
+            return
+        if not messagebox.askyesno(
+            "Restaurar en local",
+            f"Se reescribirá la DB local (Docker) con «{dump}» del backup de la nube.\n\n"
+            "Las tablas que ya existan se conservan; se cargan las que falten. "
+            "Esta acción NO toca la nube. ¿Continuar?",
+            parent=self.app,
+        ):
+            return
+        self.append(f"▶ Restaurando {dump} en la DB local…", "info")
+
+        def _go():
+            from meshweave.config import load_config
+            from meshweave.sync import restore_dump
+            try:
+                cfg = load_config()
+                result = restore_dump(cfg, dump, emit=lambda msg, lvl: self.app._q.put(("backup", msg, lvl)))
+                if result.get("status") != "ok":
+                    self.app._q.put(("backup", f"Restauración FALLÓ: {result.get('error')}", "err"))
+                else:
+                    self.app._q.put(("backup", f"Restauración completada ({dump}).", "ok"))
+            except Exception as e:  # noqa: BLE001
+                self.app._q.put(("backup", f"ERROR restauración: {e}", "err"))
+
+        import threading
+        threading.Thread(target=_go, daemon=True).start()
 
     def _validate(self):
         self.append("Validación de dumps (solo lectura de cabecera):", "info")
@@ -81,9 +122,15 @@ class BackupsView:
         files = sorted(d.glob("cloud-*.dump")) if d.exists() else []
         text = []
         if files:
+            names = [f.name for f in files[-10:]]
+            self.dump_combo.configure(values=names)
+            if self.dump_combo.get() not in names:
+                self.dump_combo.set(names[-1])
             for f in files[-10:]:
                 text.append(f"{f.name:28s} {f.stat().st_size / 1024 / 1024:6.2f} MB")
         else:
+            self.dump_combo.configure(values=[])
+            self.dump_combo.set("")
             text.append("(sin dumps todavía)")
         text.append("")
         text.append("Últimas corridas:")
