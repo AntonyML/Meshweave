@@ -30,8 +30,8 @@ class DiagnosticsView:
         h2(top, "Verificaciones").pack(anchor="w", padx=14, pady=(10, 4))
         brow = ctk.CTkFrame(top, fg_color="transparent")
         brow.pack(fill="x", padx=10, pady=(0, 6))
-        btn(brow, "🔍  Ejecutar verificaciones", self.run_checks, "info").pack(side="left", padx=4)
-        btn(brow, "📤  Exportar diagnóstico (sin secretos)", self.export, "border").pack(side="left", padx=4)
+        btn(brow, "Ejecutar verificaciones", self.run_checks, "info", icon="search").pack(side="left", padx=4)
+        btn(brow, "Exportar diagnóstico (sin secretos)", self.export, "border", icon="upload").pack(side="left", padx=4)
         self.checks_box = mono_box(top)
         self.checks_box.pack(fill="x", padx=10, pady=(0, 10))
         self.checks_box.configure(state="disabled", height=130)
@@ -49,9 +49,9 @@ class DiagnosticsView:
         self.cf_lbl = ctk.CTkLabel(crow, text="cloudflared: verificando…",
                                    font=ctk.CTkFont(*FONT_UI), text_color=C["warn"])
         self.cf_lbl.pack(side="left", padx=4)
-        self.btn_download = btn(crow, "⬇  Descargar / instalar", self.download, "ok")
+        self.btn_download = btn(crow, "Descargar / instalar", self.download, "ok", icon="download")
         self.btn_download.pack(side="right", padx=4)
-        btn(crow, "🔄 Verificar versión", self._check_version, "border").pack(side="right", padx=4)
+        btn(crow, "Verificar versión", self._check_version, "border", icon="refresh").pack(side="right", padx=4)
 
         out = card(parent)
         out.grid(row=2, column=0, sticky="nsew", padx=6, pady=(3, 6))
@@ -146,7 +146,7 @@ class DiagnosticsView:
 
         def _go():
             ok, msg = cloudflared_manager.download()
-            self.app.post(lambda: (self.btn_download.configure(state="normal", text="⬇  Descargar / instalar"),
+            self.app.post(lambda: (self.btn_download.configure(state="normal", text="Descargar / instalar"),
                                    self._check_version(),
                                    self.app.toast(msg, "ok" if ok else "err")))
 

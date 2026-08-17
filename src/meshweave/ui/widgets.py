@@ -1,15 +1,16 @@
-"""Widgets reutilizables."""
+"""Widgets reutilizables (estilo Uber: blanco/negro, trazos finos, sin sombras)."""
 from __future__ import annotations
 
 from collections.abc import Callable
 
 import customtkinter as ctk
 
+from meshweave.ui import icons
 from meshweave.ui.theme import FONT_HEAD, FONT_MONO, FONT_UI, C
 
 
 def card(parent, **kw) -> ctk.CTkFrame:
-    return ctk.CTkFrame(parent, fg_color=C["card"], corner_radius=10, **kw)
+    return ctk.CTkFrame(parent, fg_color=C["card"], corner_radius=8, **kw)
 
 
 def h2(parent, text: str, color: str = "text") -> ctk.CTkLabel:
@@ -19,25 +20,42 @@ def h2(parent, text: str, color: str = "text") -> ctk.CTkLabel:
 
 def mono_box(parent) -> ctk.CTkTextbox:
     return ctk.CTkTextbox(
-        parent, fg_color=C["darker"], text_color=C["text"],
+        parent, fg_color="#ffffff", border_color=C["border"], border_width=1,
+        corner_radius=8, text_color=C["text"],
         font=ctk.CTkFont(*FONT_MONO), wrap="word",
     )
 
 
-def btn(parent, text: str, cmd: Callable, color: str = "border", **kw) -> ctk.CTkButton:
-    colors = {
-        "ok": (C["ok"], "#16a34a"),
-        "err": (C["err"], "#dc2626"),
-        "info": ("#1d4ed8", "#1e40af"),
-        "dark": (C["border"], C["muted"]),
-        "border": (C["border"], "#475569"),
-    }
-    fg, hv = colors.get(color, (C["border"], C["muted"]))
-    return ctk.CTkButton(
-        parent, text=text, command=cmd,
-        fg_color=fg, hover_color=hv,
-        font=ctk.CTkFont(*FONT_UI), **kw
+# Estilos de botón: (fondo, hover, texto, borde, radio)
+_BTN_STYLES = {
+    "ok":     ("#000000", "#333333", "#ffffff", None, 8),        # CTA negro
+    "dark":   ("#000000", "#333333", "#ffffff", None, 8),
+    "info":   ("#ffffff", "#f6f6f6", "#000000", "#000000", 8),   # contorno negro
+    "border": ("#ffffff", "#f6f6f6", "#000000", "#767676", 8),   # contorno gris
+    "err":    ("#d93025", "#b3261e", "#ffffff", None, 8),        # destructivo
+    "pill":   ("#ffffff", "#f6f6f6", "#000000", None, 9999),     # píldora (nav negra)
+}
+
+
+def btn(parent, text: str = "", cmd: Callable | None = None, color: str = "border",
+        icon: str | None = None, icon_color: str | None = None, **kw) -> ctk.CTkButton:
+    """Botón con estilos Uber. `icon` = nombre del icono (opcional)."""
+    fg, hv, txt, brd, radius = _BTN_STYLES.get(color, _BTN_STYLES["border"])
+    if icon_color is None:
+        icon_color = "white" if txt == "#ffffff" else "black"
+    kwargs: dict = dict(
+        text=text, command=cmd,
+        fg_color=fg, hover_color=hv, text_color=txt,
+        corner_radius=radius, font=ctk.CTkFont(*FONT_UI),
     )
+    if brd:
+        kwargs["border_width"] = 1
+        kwargs["border_color"] = brd
+    if icon:
+        kwargs["image"] = icons.photo(icon, 16, icon_color)
+        kwargs["compound"] = "left"
+    kwargs.update(kw)
+    return ctk.CTkButton(parent, **kwargs)
 
 
 def append_line(box: ctk.CTkTextbox, line: str, level: str = "info", autoscroll: bool = True) -> None:

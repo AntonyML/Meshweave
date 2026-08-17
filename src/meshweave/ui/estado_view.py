@@ -12,10 +12,12 @@ import customtkinter as ctk
 
 from meshweave.config import load_config
 from meshweave.readiness import CheckItem, check_readiness, summary
+from meshweave.ui import icons
 from meshweave.ui.theme import FONT_UI, C
 from meshweave.ui.widgets import btn, card, h2, mono_box, tag_configure
 
-_ICONS = {"ok": "✅", "warn": "⚠️", "err": "❌"}
+# (icono, color) por estado — se incrustan como imagen en el textbox.
+_ICONS = {"ok": ("check", "ok"), "warn": ("warn", "warn"), "err": ("error", "err")}
 _TAGS = {"ok": "ok", "warn": "warn", "err": "err"}
 
 
@@ -39,7 +41,7 @@ class EstadoView:
         self.summary_lbl.pack(fill="x", padx=14, pady=(0, 4))
         brow = ctk.CTkFrame(top, fg_color="transparent")
         brow.pack(fill="x", padx=10, pady=(2, 10))
-        btn(brow, "🔄  Revisar ahora", self.refresh, "info").pack(side="left", padx=4)
+        btn(brow, "Revisar ahora", self.refresh, "info", icon="refresh").pack(side="left", padx=4)
         ctk.CTkLabel(
             top,
             text="Cada punto indica qué falta y por qué: [físico] = falta un "
@@ -80,18 +82,18 @@ class EstadoView:
         errs, warns, oks = summary(items)
         pending = [i for i in items if i.status != "ok"]
         if not pending:
-            self.summary_lbl.configure(text="✅ Todo listo — no falta nada por configurar.",
+            self.summary_lbl.configure(text="Todo listo — no falta nada por configurar.",
                                        text_color=C["ok"])
         else:
             nombres = ", ".join(i.label for i in pending)
             if errs:
                 self.summary_lbl.configure(
-                    text=f"❌ Faltan {errs + warns} cosas por revisar "
+                    text=f"Faltan {errs + warns} cosas por revisar "
                          f"({errs} bloqueantes, {warns} recomendadas): {nombres}",
                     text_color=C["err"])
             else:
                 self.summary_lbl.configure(
-                    text=f"⚠️ Faltan {warns} cosas por revisar (recomendadas): {nombres}",
+                    text=f"Faltan {warns} cosas por revisar (recomendadas): {nombres}",
                     text_color=C["warn"])
 
         tb = getattr(self.output, "_textbox", None)
@@ -100,7 +102,9 @@ class EstadoView:
             tb.delete("1.0", "end")
             for i in items:
                 tag = _TAGS.get(i.status, "info")
-                tb.insert("end", f"{_ICONS.get(i.status, '•')} {i.label}  ", tag)
+                icon_name, icon_color = _ICONS.get(i.status, ("info", "black"))
+                tb.image_create("end", image=icons.photo(icon_name, 14, icon_color))
+                tb.insert("end", " " + i.label + "  ", tag)
                 tb.insert("end", f"[{i.kind}]\n", "dim")
                 tb.insert("end", f"    {i.detail}\n", "info")
                 if i.action:

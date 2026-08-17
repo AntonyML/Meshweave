@@ -16,6 +16,7 @@ import customtkinter as ctk
 
 from meshweave.config import load_config, save_config
 from meshweave.secrets import SecretStore
+from meshweave.ui import icons
 from meshweave.ui.theme import FONT_UI, C
 from meshweave.ui.widgets import btn, card, h2
 
@@ -85,7 +86,9 @@ class FirstRunWizard(ctk.CTkToplevel):
     def _build(self):
         hdr = ctk.CTkFrame(self, fg_color=C["darker"], corner_radius=0)
         hdr.pack(fill="x")
-        h2(hdr, "⬡  Bienvenido a Meshweave").pack(anchor="w", padx=18, pady=(14, 2))
+        ctk.CTkLabel(hdr, text="Bienvenido a Meshweave", image=icons.photo("brand", 18),
+                     compound="left", font=ctk.CTkFont("Segoe UI Semibold", 15),
+                     text_color=C["ondark"]).pack(anchor="w", padx=18, pady=(14, 2))
         ctk.CTkLabel(hdr, text="Primera configuración — tus datos quedan en esta PC "
                                "(secretos cifrados con DPAPI).",
                      font=ctk.CTkFont(*FONT_UI), text_color=C["sub"]).pack(anchor="w", padx=18, pady=(0, 12))
@@ -159,8 +162,8 @@ class FirstRunWizard(ctk.CTkToplevel):
         self.cf_lbl = ctk.CTkLabel(row, text="cloudflared: verificando…",
                                    font=ctk.CTkFont(*FONT_UI), text_color=C["warn"])
         self.cf_lbl.pack(side="left", padx=4)
-        btn(row, "⬇  Descargar", self._download_cloudflared, "ok").pack(side="right", padx=4)
-        btn(row, "📂  Usar existente", self._pick_cloudflared, "border").pack(side="right", padx=4)
+        btn(row, "Descargar", self._download_cloudflared, "ok", icon="download").pack(side="right", padx=4)
+        btn(row, "Usar existente", self._pick_cloudflared, "border", icon="folder").pack(side="right", padx=4)
         self._check_cloudflared()
 
     def _step_form(self, title: str, intro: str, keys: list[tuple[str, str, bool, str]],
@@ -191,7 +194,7 @@ class FirstRunWizard(ctk.CTkToplevel):
             row = ctk.CTkFrame(c, fg_color="transparent")
             row.pack(fill="x", padx=6, pady=3)
             ctk.CTkLabel(row, text="", width=190).pack(side="left")
-            btn(row, "📂 Buscar carpeta", self._browse_backend, "border").pack(side="left", padx=4)
+            btn(row, "Buscar carpeta", self._browse_backend, "border", icon="folder").pack(side="left", padx=4)
         self._step_form(
             "3/6 · Backend FastAPI (opcional)",
             "Si Meshweave debe iniciar tu backend, indica la carpeta del proyecto. "
@@ -205,7 +208,7 @@ class FirstRunWizard(ctk.CTkToplevel):
             row = ctk.CTkFrame(c, fg_color="transparent")
             row.pack(fill="x", padx=6, pady=3)
             ctk.CTkLabel(row, text="", width=190).pack(side="left")
-            btn(row, "📂 Buscar .env", self._browse_env, "border").pack(side="left", padx=4)
+            btn(row, "Buscar .env", self._browse_env, "border", icon="folder").pack(side="left", padx=4)
         self._step_form(
             "4/6 · Supabase (local + nube)",
             "Ruta al .env de tu Supabase local (Docker) y datos del pooler de la nube. "
@@ -220,7 +223,7 @@ class FirstRunWizard(ctk.CTkToplevel):
             ctk.CTkCheckBox(c, text="Enviar resumen diario cuando el sync termina OK",
                             variable=var, font=ctk.CTkFont(*FONT_UI)).pack(anchor="w", padx=12, pady=4)
             self.checks["summary_email"] = var
-            btn(c, "📧 Probar alerta", self._test_alert, "border").pack(anchor="w", padx=12, pady=(2, 10))
+            btn(c, "Probar alerta", self._test_alert, "border", icon="mail").pack(anchor="w", padx=12, pady=(2, 10))
         self._step_form(
             "5/6 · Alertas por email (Resend, opcional)",
             "Recibirás un email si el sync/backup falla y un resumen diario cuando todo va "
@@ -243,7 +246,7 @@ class FirstRunWizard(ctk.CTkToplevel):
         self.tasks_lbl = ctk.CTkLabel(row, text="Tareas: sin instalar",
                                       font=ctk.CTkFont(*FONT_UI), text_color=C["warn"])
         self.tasks_lbl.pack(side="left", padx=4)
-        btn(row, "📅 Instalar tareas", self._install_tasks, "info").pack(side="right", padx=4)
+        btn(row, "Instalar tareas", self._install_tasks, "info", icon="calendar").pack(side="right", padx=4)
         self._refresh_tasks()
 
     # ── Acciones ──────────────────────────────────────────────────────────

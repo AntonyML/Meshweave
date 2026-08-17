@@ -37,12 +37,12 @@ class SyncView:
         h2(ctrl, "Controles").pack(anchor="w", padx=14, pady=(10, 6))
         brow = ctk.CTkFrame(ctrl, fg_color="transparent")
         brow.pack(fill="x", padx=10, pady=(0, 6))
-        self.btn_run = btn(brow, "▶  Sincronizar ahora", self.app.actions.sync_now, "ok")
-        self.btn_check = btn(brow, "🧪 Probar conexiones", self.app.actions.sync_check, "border")
-        self.btn_refresh = btn(brow, "🔄 Actualizar estado", self.app.actions.sync_refresh, "info")
-        self.btn_install = btn(brow, "📅 Instalar tareas", self.app.actions.sync_install_tasks, "border")
-        self.btn_uninstall = btn(brow, "🗑 Quitar tareas", self.app.actions.sync_uninstall_tasks, "err")
-        self.btn_alert = btn(brow, "📧 Probar alerta", self.app.actions.sync_test_alert, "border")
+        self.btn_run = btn(brow, "Sincronizar ahora", self.app.actions.sync_now, "ok", icon="play")
+        self.btn_check = btn(brow, "Probar conexiones", self.app.actions.sync_check, "border", icon="flask")
+        self.btn_refresh = btn(brow, "Actualizar estado", self.app.actions.sync_refresh, "info", icon="refresh")
+        self.btn_install = btn(brow, "Instalar tareas", self.app.actions.sync_install_tasks, "border", icon="calendar")
+        self.btn_uninstall = btn(brow, "Quitar tareas", self.app.actions.sync_uninstall_tasks, "err", icon="trash")
+        self.btn_alert = btn(brow, "Probar alerta", self.app.actions.sync_test_alert, "border", icon="mail")
         for b in (self.btn_run, self.btn_check, self.btn_refresh, self.btn_install,
                   self.btn_uninstall, self.btn_alert):
             b.pack(side="left", padx=4, ipady=2)
@@ -89,7 +89,7 @@ class SyncView:
     def set_busy(self, busy: bool):
         self._busy = busy
         self.btn_run.configure(state="disabled" if busy else "normal",
-                               text="⏳ Sincronizando…" if busy else "▶  Sincronizar ahora")
+                               text="Sincronizando…" if busy else "Sincronizar ahora")
 
     def append(self, line: str, level: str = "info"):
         append_line(self.logbox, line, level, autoscroll=self.autoscroll.get())

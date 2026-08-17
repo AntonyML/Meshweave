@@ -27,6 +27,17 @@ def package_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def assets_dir() -> Path:
+    """Carpeta de assets empaquetados (icono). Frozen: dentro del bundle
+    (_MEIPASS); dev: la carpeta assets del repo."""
+    if is_frozen():
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            return Path(meipass) / "assets"
+        return Path(sys.executable).resolve().parent / "assets"
+    return Path(__file__).resolve().parents[2] / "assets"
+
+
 def data_dir() -> Path:
     """%ProgramData%\\Meshweave — datos del sistema (config, logs, estado…)."""
     override = os.environ.get("MESHWEAVE_DATA_DIR")

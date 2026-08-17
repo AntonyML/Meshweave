@@ -16,12 +16,13 @@ import customtkinter as ctk
 from meshweave import APP_NAME, __version__
 from meshweave import sync as sync_mod
 from meshweave.config import is_first_run, load_config, save_config
-from meshweave.paths import ensure_dirs
+from meshweave.paths import assets_dir, ensure_dirs
 from meshweave.process_runner import CREATE_NO_WINDOW
 from meshweave.readiness import check_readiness, summary
 from meshweave.services.backend_service import BackendService
 from meshweave.services.sync_service import SyncService
 from meshweave.services.tunnel_service import TunnelService
+from meshweave.ui import icons
 from meshweave.ui.backend_view import BackendView
 from meshweave.ui.backups_view import BackupsView
 from meshweave.ui.dashboard_view import DashboardView
@@ -32,6 +33,7 @@ from meshweave.ui.settings_view import SettingsView
 from meshweave.ui.sync_view import SyncView
 from meshweave.ui.theme import FONT_MONO, FONT_UI, C
 from meshweave.ui.tunnel_view import TunnelView
+from meshweave.ui.widgets import btn
 
 
 class Actions:
@@ -212,6 +214,7 @@ class App(ctk.CTk):
         self.title(f"{APP_NAME} — Centro de control local  v{__version__}")
         self.geometry("980x700")
         self.minsize(860, 600)
+        self._set_window_icon()
 
         self._q = queue.Queue()
         self.tunnel = TunnelService(lambda line: self._q.put(("tunnel", line)))
@@ -224,6 +227,30 @@ class App(ctk.CTk):
         self._poll()
         self.after(1500, self._initial_sync_refresh)
         self._run_readiness()
+
+    def _open_about(self):
+        """Abre el diálogo Acerca de (info, metadatos y términos de uso)."""
+        from meshweave.ui.about_view import AboutDialog
+        AboutDialog(self)
+
+    def _set_window_icon(self):
+        """Icono de la ventana (titlebar/taskbar) = el mismo del exe."""
+        assets = assets_dir()
+        ico = assets / "meshweave.ico"
+        try:
+            if ico.exists():
+                self.iconbitmap(str(ico))
+        except Exception:  # noqa: BLE001
+            pass
+        # iconphoto: taskbar en dev (el exe congelado ya aporta el icono).
+        try:
+            png = assets / "meshweave.png"
+            if png.exists():
+                from tkinter import PhotoImage
+                self._icon_img = PhotoImage(file=str(png))
+                self.iconphoto(True, self._icon_img)
+        except Exception:  # noqa: BLE001 — el icono nunca debe romper el arranque
+            pass
 
     def _initial_sync_refresh(self):
         if not getattr(self, "_destroyed", False):
@@ -253,34 +280,46 @@ class App(ctk.CTk):
             n = errs + warns
             if n:
                 self.toast(
-                    f"⚠️ Faltan {n} cosa{'s' if n != 1 else ''} por configurar "
+                    f"Faltan {n} cosa{'s' if n != 1 else ''} por configurar "
                     "— mira la pestaña Estado.",
                     "err" if errs else "warn")
             else:
-                self.toast("✅ Todo listo — no falta nada.", "ok")
+                self.toast("Todo listo — no falta nada.", "ok")
         self.dashboard.set_checklist(errs, warns)
 
     # ── Cabecera ──
 
     def _build_header(self):
+        # Banda estructural negra (estilo Uber).
         hdr = ctk.CTkFrame(self, fg_color=C["darker"], height=52, corner_radius=0)
         hdr.pack(fill="x")
         hdr.pack_propagate(False)
-        ctk.CTkLabel(hdr, text=f"⬡  {APP_NAME}",
-                     font=ctk.CTkFont("Segoe UI Semibold", 16),
-                     text_color=C["info"]).pack(side="left", padx=20)
+        ctk.CTkLabel(hdr, text="Meshweave", image=icons.photo("brand", 20),
+                     compound="left", font=ctk.CTkFont("Segoe UI Semibold", 16),
+                     text_color=C["ondark"]).pack(side="left", padx=20)
         cfg = load_config()
         ctk.CTkLabel(hdr, text=f"{cfg.get('tunnel_hostname', '—')}  →  "
                                f"http://127.0.0.1:{cfg.get('tunnel_local_port', 8000)}",
-                     font=ctk.CTkFont(*FONT_MONO), text_color=C["muted"]).pack(side="left", padx=4)
+                     font=ctk.CTkFont(*FONT_MONO), text_color=C["ondark_sub"]).pack(side="left", padx=4)
         self._toast_lbl = ctk.CTkLabel(hdr, text="", font=ctk.CTkFont(*FONT_UI),
-                                       text_color=C["ok"], anchor="e")
+                                       text_color=C["ondark"], anchor="e")
         self._toast_lbl.pack(side="right", padx=20)
+        # Píldora blanca (único elemento que rompe la banda negra).
+        btn(hdr, "Acerca de", self._open_about, "pill", icon="info").pack(side="right", padx=4)
 
     # ── Pestañas ──
 
     def _build_tabs(self):
-        self._tabs = ctk.CTkTabview(self, fg_color="#141f2e", segmented_button_fg_color=C["card"])
+        # Tira de pestañas: activa con relleno teal (único acento de la UI).
+        self._tabs = ctk.CTkTabview(
+            self, fg_color="#ffffff",
+            segmented_button_fg_color="#ffffff",
+            segmented_button_selected_color=C["accent"],
+            segmented_button_selected_hover_color=C["accent"],
+            segmented_button_unselected_color="#ffffff",
+            segmented_button_unselected_hover_color=C["card"],
+            text_color="#000000",
+        )
         self._tabs.pack(fill="both", expand=True, padx=10, pady=(6, 10))
         for name in ("Dashboard", "Estado", "Túnel", "Backend", "Sincronización", "Backups",
                      "Configuración", "Logs", "Diagnóstico"):
@@ -385,7 +424,8 @@ class App(ctk.CTk):
         self.dashboard._lbl_sync.configure(text="Sync: —")
 
     def toast(self, msg: str, level: str = "info"):
-        color = {"ok": C["ok"], "err": C["err"], "warn": C["warn"]}.get(level, C["info"])
+        # El toast vive en la banda negra: usa variantes claras legibles.
+        color = {"ok": "#4ade80", "err": "#f87171", "warn": "#fbbf24"}.get(level, C["ondark"])
         if self._toast_lbl:
             self._toast_lbl.configure(text=msg, text_color=color)
             self.after(8000, self._clear_toast)

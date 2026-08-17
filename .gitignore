@@ -39,6 +39,8 @@ dist/
 *.spec.bak
 installer/*.exe
 installer/*.zip
+# Versión inyectada por scripts/build.ps1 (la versión real sale del tag git).
+src/meshweave/_build_version.py
 
 # ── Editor / SO ───────────────────────────────────────────────────────
 .idea/

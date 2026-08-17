@@ -4,7 +4,10 @@
 ; backups, bin) — fuera de Program Files, sin permisos elevados en runtime.
 
 #define MyAppName "Meshweave"
+; build.ps1 pasa la versión con /DMyAppVersion=x.y.z; si no, este default.
+#ifndef MyAppVersion
 #define MyAppVersion "0.1.0"
+#endif
 #define MyAppExeName "Meshweave.exe"
 #define MyAppId "com.meshweave.desktop"
 
@@ -17,6 +20,7 @@ DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 OutputDir=..\dist\installer
 OutputBaseFilename=Meshweave-Setup-x64
+SetupIconFile=..\assets\meshweave.ico
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern

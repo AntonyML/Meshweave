@@ -24,10 +24,10 @@ class LogsView:
         self.autoscroll = ctk.BooleanVar(value=True)
         ctk.CTkCheckBox(toolbar, text="Auto-scroll", variable=self.autoscroll,
                         font=ctk.CTkFont(*FONT_UI)).pack(side="left", padx=10)
-        btn(toolbar, "📂 Carpeta logs",
+        btn(toolbar, "Carpeta logs",
             lambda: __import__("os").startfile(logs_dir()) if logs_dir().exists() else None,
-            "border", width=120, height=28).pack(side="right", padx=8, pady=8)
-        btn(toolbar, "🔄 Recargar", self.refresh, "border", width=90, height=28).pack(side="right", padx=4, pady=8)
+            "border", icon="folder", width=120, height=28).pack(side="right", padx=8, pady=8)
+        btn(toolbar, "Recargar", self.refresh, "border", icon="refresh", width=90, height=28).pack(side="right", padx=4, pady=8)
 
         log_card = card(parent)
         log_card.grid(row=1, column=0, sticky="nsew", padx=6, pady=(3, 6))

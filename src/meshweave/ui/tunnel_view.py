@@ -35,10 +35,10 @@ class TunnelView:
 
         brow = ctk.CTkFrame(top, fg_color="transparent")
         brow.pack(fill="x", padx=10, pady=(4, 10))
-        self.btn_start = btn(brow, "▶  Iniciar", self.app.actions.tunnel_start, "ok")
-        self.btn_stop = btn(brow, "⏹  Detener", self.app.actions.tunnel_stop, "err", state="disabled")
-        btn(brow, "🔄 Reiniciar", self.app.actions.tunnel_restart, "border").pack(side="left", padx=4)
-        btn(brow, "🧪 Validar config", self._validate, "border").pack(side="left", padx=4)
+        self.btn_start = btn(brow, "Iniciar", self.app.actions.tunnel_start, "ok", icon="play")
+        self.btn_stop = btn(brow, "Detener", self.app.actions.tunnel_stop, "err", icon="stop", state="disabled")
+        btn(brow, "Reiniciar", self.app.actions.tunnel_restart, "border", icon="refresh").pack(side="left", padx=4)
+        btn(brow, "Validar config", self._validate, "border", icon="flask").pack(side="left", padx=4)
         self.btn_start.pack(side="left", padx=4)
         self.btn_stop.pack(side="left", padx=4)
 
@@ -59,8 +59,8 @@ class TunnelView:
         irow.pack(fill="x", padx=10, pady=(2, 10))
         btn(irow, "Install Service", self._svc_install, "info").pack(side="left", padx=4)
         btn(irow, "Uninstall Service", self._svc_uninstall, "border").pack(side="left", padx=4)
-        btn(irow, "▶  Iniciar Servicio", self._svc_start, "ok").pack(side="left", padx=4)
-        btn(irow, "⏹  Detener Servicio", self._svc_stop, "err").pack(side="left", padx=4)
+        btn(irow, "Iniciar Servicio", self._svc_start, "ok", icon="play").pack(side="left", padx=4)
+        btn(irow, "Detener Servicio", self._svc_stop, "err", icon="stop").pack(side="left", padx=4)
 
         # ── Config runtime ──
         cfg_card = card(parent)

@@ -25,7 +25,14 @@ hiddenimports = collect_submodules("meshweave") + [
     "psycopg.types.datetime",
 ]
 
-datas = collect_data_files("customtkinter")
+datas = collect_data_files("customtkinter") + [
+    (str(ROOT / "assets"), "assets"),  # icono de la ventana (iconbitmap)
+]
+
+# Recurso de versión de Windows (propiedades del exe). Lo genera
+# scripts/build.ps1 → scripts/make_version_info.py; opcional fuera del build.
+_version_info = ROOT / "build" / "version_info.txt"
+_version = str(_version_info) if _version_info.exists() else None
 
 a = Analysis(
     [str(ROOT / "src" / "meshweave" / "app.py")],
@@ -65,4 +72,6 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=str(ROOT / "assets" / "meshweave.ico"),
+    version=_version,
 )

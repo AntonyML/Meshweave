@@ -29,12 +29,12 @@ class BackupsView:
         self.info_lbl.pack(fill="x", padx=14, pady=(0, 4))
         brow = ctk.CTkFrame(top, fg_color="transparent")
         brow.pack(fill="x", padx=10, pady=(2, 10))
-        btn(brow, "💾  Backup ahora", self.app.actions.sync_backup_now, "ok").pack(side="left", padx=4)
-        btn(brow, "🔍  Validar dumps", self._validate, "border").pack(side="left", padx=4)
-        btn(brow, "📂  Abrir carpeta", self._open_dir, "border").pack(side="left", padx=4)
+        btn(brow, "Backup ahora", self.app.actions.sync_backup_now, "ok", icon="save").pack(side="left", padx=4)
+        btn(brow, "Validar dumps", self._validate, "border", icon="search").pack(side="left", padx=4)
+        btn(brow, "Abrir carpeta", self._open_dir, "border", icon="folder").pack(side="left", padx=4)
         self.dump_combo = ctk.CTkComboBox(brow, width=200, state="readonly")
         self.dump_combo.pack(side="left", padx=(14, 4))
-        btn(brow, "♻  Restaurar en local", self._restore, "err").pack(side="left", padx=4)
+        btn(brow, "Restaurar en local", self._restore, "err", icon="restore").pack(side="left", padx=4)
         ctk.CTkLabel(top, text="Restaurar reescribe la DB local (Docker) con el contenido del dump "
                                 "de la nube — para arrancar una PC nueva o recuperar una DB local "
                                 "dañada. No toca la nube.",

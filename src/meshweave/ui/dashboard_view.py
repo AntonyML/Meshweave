@@ -55,9 +55,9 @@ class DashboardView:
         h2(ctrl, "Túnel Cloudflare").pack(anchor="w", padx=14, pady=(12, 6))
         row = ctk.CTkFrame(ctrl, fg_color="transparent")
         row.pack(fill="x", padx=10, pady=(0, 12))
-        self._btn_start = btn(row, "▶  Iniciar Túnel", self.app.actions.tunnel_start, "ok")
-        self._btn_stop = btn(row, "⏹  Detener", self.app.actions.tunnel_stop, "err", state="disabled")
-        self._btn_restart = btn(row, "🔄 Reiniciar", self.app.actions.tunnel_restart, "border", state="disabled")
+        self._btn_start = btn(row, "Iniciar Túnel", self.app.actions.tunnel_start, "ok", icon="play")
+        self._btn_stop = btn(row, "Detener", self.app.actions.tunnel_stop, "err", icon="stop", state="disabled")
+        self._btn_restart = btn(row, "Reiniciar", self.app.actions.tunnel_restart, "border", icon="refresh", state="disabled")
         for b in (self._btn_start, self._btn_stop, self._btn_restart):
             b.pack(side="left", padx=4, ipady=2)
 
@@ -97,7 +97,7 @@ class DashboardView:
                 text=f"Estado: {n} pendiente{'s' if n != 1 else ''}",
                 text_color=C["err"] if errs else C["warn"])
         else:
-            self._lbl_checklist.configure(text="Estado: ✅", text_color=C["ok"])
+            self._lbl_checklist.configure(text="Estado: listo", text_color=C["ok"])
 
     def clear(self):
         self.console.configure(state="normal")

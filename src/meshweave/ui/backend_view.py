@@ -50,8 +50,8 @@ class BackendView:
         self.status_lbl.pack(side="left", padx=14, pady=10)
         self.uptime_lbl = ctk.CTkLabel(controls, text="Uptime: —", text_color=C["sub"])
         self.uptime_lbl.pack(side="left")
-        self.btn_start = btn(controls, "▶  Iniciar", self.app.actions.backend_start, "ok")
-        self.btn_stop = btn(controls, "⏹  Detener", self.app.actions.backend_stop, "err", state="disabled")
+        self.btn_start = btn(controls, "Iniciar", self.app.actions.backend_start, "ok", icon="play")
+        self.btn_stop = btn(controls, "Detener", self.app.actions.backend_stop, "err", icon="stop", state="disabled")
         self.btn_start.pack(side="right", padx=4, pady=8)
         self.btn_stop.pack(side="right", padx=4, pady=8)
 
@@ -64,7 +64,7 @@ class BackendView:
         self.dot_api.pack(side="left", padx=8)
         self.dot_ingest = ctk.CTkLabel(hrow, text="● Ingesta :8001  —", text_color=C["muted"])
         self.dot_ingest.pack(side="left", padx=8)
-        btn(hrow, "↻ Actualizar", self._check_health, "border").pack(side="right", padx=4)
+        btn(hrow, "Actualizar", self._check_health, "border", icon="refresh").pack(side="right", padx=4)
 
         out_card = card(parent)
         out_card.grid(row=3, column=0, sticky="nsew", padx=6, pady=(3, 6))
