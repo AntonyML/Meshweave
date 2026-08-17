@@ -22,7 +22,8 @@ _HINTS: dict[str, str] = {
     "tunnel_local_port": "Puerto local donde escucha tu backend (8000 por defecto). El túnel reenvía el tráfico del hostname a este puerto.",
     "tunnel_id": "ID del túnel (UUID). Lo ves en Cloudflare Zero Trust → Networks → Tunnels, en el detalle del túnel.",
     "account_tag": "Identificador corto de tu cuenta Cloudflare (aparece en la URL del dashboard de Zero Trust).",
-    "tunnel_secret_dpapi": "Secreto del túnel (32+ caracteres, lo genera Cloudflare). Se guarda cifrado con DPAPI de Windows, nunca en texto plano.",
+    "tunnel_secret_dpapi": "Token del túnel. En Cloudflare → Zero Trust → Networks → Tunnels → tu túnel → Configure → copia el valor de --token en el comando cloudflared tunnel run. Cloudflare lo genera al crear el túnel; tú solo lo copias.",
+    "resend_api_key": "Tu API key de resend.com (re_…). La encuentras en resend.com → API Keys.",
     # ── Backend ──
     "backend_project_dir": "Carpeta raíz del proyecto backend (donde está app/main.py). Vacío = Meshweave no gestiona el backend.",
     "backend_command": "Comando para arrancar el backend. Vacío = uvicorn app.main:app en el puerto del túnel.",
@@ -54,7 +55,7 @@ _CARD_INTROS: dict[str, str] = {
     "Backend": "Opcional: para que Meshweave arranque y vigile tu backend FastAPI automáticamente.",
     "Supabase / Sync": "Conexiones para sincronizar la base local (Docker) con la nube de Supabase.",
     "Horarios": "Tareas del programador de Windows. Se activan en Sincronización → «Instalar tareas».",
-    "Alertas (Resend)": "Avisos por email si algo falla. Todo vacío = se toma del .env del backend (RESEND_API_KEY, RESEND_FROM_EMAIL, ADMIN_EMAIL).",
+    "Alertas (Resend)": "Avisos por email si algo falla.",
 }
 
 
@@ -65,13 +66,14 @@ class SettingsView:
         self.checks: dict[str, ctk.BooleanVar] = {}
         self._build(parent)
 
-    def _entry(self, parent, row, label, key, cfg, secret=False):
+    def _entry(self, parent, row, label, key, cfg, secret=False, required=False):
         box = ctk.CTkFrame(parent, fg_color="transparent")
         box.pack(fill="x", padx=12, pady=(4, 2))
         r = ctk.CTkFrame(box, fg_color="transparent")
         r.pack(fill="x")
-        ctk.CTkLabel(r, text=label, width=210, font=ctk.CTkFont(*FONT_UI),
-                     text_color=C["sub"], anchor="w").pack(side="left")
+        lab = ctk.CTkLabel(r, text=label + (" *" if required else ""), width=210, font=ctk.CTkFont(*FONT_UI),
+                     text_color=C["err"] if required else C["sub"], anchor="w")
+        lab.pack(side="left")
         e = ctk.CTkEntry(r, show="*" if secret else "")
         e.pack(side="left", fill="x", expand=True, padx=4)
         e.insert(0, str(cfg.get(key, "") or ""))
@@ -127,32 +129,25 @@ class SettingsView:
         c1.pack(fill="x", padx=4, pady=(0, 6))
         h2(c1, "Túnel Cloudflare").pack(anchor="w", padx=14, pady=(10, 4))
         self._card_intro(c1, _CARD_INTROS["Túnel Cloudflare"])
-        self._entry(c1, 0, "Hostname", "tunnel_hostname", cfg)
+        self._entry(c1, 0, "Hostname", "tunnel_hostname", cfg, required=True)
         self._entry(c1, 1, "Puerto local", "tunnel_local_port", cfg)
-        self._entry(c1, 2, "Tunnel ID", "tunnel_id", cfg)
-        self._entry(c1, 3, "Account Tag", "account_tag", cfg)
-        self._entry(c1, 4, "TunnelSecret (DPAPI)", "tunnel_secret_dpapi", {}, secret=True)
-
-        # ── Backend ──
-        c2 = card(scroll)
-        c2.pack(fill="x", padx=4, pady=(0, 6))
-        h2(c2, "Backend").pack(anchor="w", padx=14, pady=(10, 4))
-        self._card_intro(c2, _CARD_INTROS["Backend"])
-        self._entry(c2, 0, "Carpeta del proyecto", "backend_project_dir", cfg)
-        self._entry(c2, 1, "Comando (vacío = uvicorn)", "backend_command", cfg)
-        self._entry(c2, 2, "Archivo .env (vacío = proyecto/.env)", "backend_env_file", cfg)
+        self._entry(c1, 2, "Tunnel ID", "tunnel_id", cfg, required=True)
+        self._entry(c1, 3, "Account Tag", "account_tag", cfg, required=True)
+        self._entry(c1, 4, "TunnelSecret (DPAPI)", "tunnel_secret_dpapi", {}, secret=True, required=True)
+        ctk.CTkLabel(c1, text="¿Cómo obtenerlo? →", text_color=C["accent"], cursor="hand2").pack(anchor="w", padx=224)
+        c1.winfo_children()[-1].bind("<Button-1>", lambda _e: __import__("webbrowser").open("https://dash.cloudflare.com"))
 
         # ── Supabase / Sync ──
         c3 = card(scroll)
         c3.pack(fill="x", padx=4, pady=(0, 6))
         h2(c3, "Supabase / Sync").pack(anchor="w", padx=14, pady=(10, 4))
         self._card_intro(c3, _CARD_INTROS["Supabase / Sync"])
-        self._entry(c3, 0, ".env del supabase local (Docker)", "supabase_env", cfg)
-        self._entry(c3, 1, "Nube host (pooler)", "cloud_db_host", cfg)
-        self._entry(c3, 2, "Nube usuario", "cloud_db_user", cfg)
+        self._entry(c3, 0, ".env del supabase local (Docker)", "supabase_env", cfg, required=True)
+        self._entry(c3, 1, "Nube host (pooler)", "cloud_db_host", cfg, required=True)
+        self._entry(c3, 2, "Nube usuario", "cloud_db_user", cfg, required=True)
         self._entry(c3, 3, "Nube puerto", "cloud_db_port", cfg)
         self._entry(c3, 4, "Nube db", "cloud_db_name", cfg)
-        self._entry(c3, 5, "Nube password (DPAPI)", "cloud_db_password_dpapi", {}, secret=True)
+        self._entry(c3, 5, "Nube password (DPAPI)", "cloud_db_password_dpapi", {}, secret=True, required=True)
         self._entry(c3, 6, "Lote (filas)", "batch_size", cfg)
         self._entry(c3, 7, "Delay entre lotes (s)", "batch_delay_seconds", cfg)
 
@@ -170,8 +165,9 @@ class SettingsView:
         c5.pack(fill="x", padx=4, pady=(0, 6))
         h2(c5, "Alertas (Resend)").pack(anchor="w", padx=14, pady=(10, 4))
         self._card_intro(c5, _CARD_INTROS["Alertas (Resend)"])
-        self._entry(c5, 0, "From (vacío = .env backend)", "resend_from_email", cfg)
-        self._entry(c5, 1, "To (vacío = ADMIN_EMAIL)", "alerts_to_email", cfg)
+        self._entry(c5, 0, "API key", "resend_api_key", cfg, secret=True, required=True)
+        self._entry(c5, 1, "From", "resend_from_email", cfg)
+        self._entry(c5, 2, "To", "alerts_to_email", cfg, required=True)
         self._check(c5, "Alertar en error", "alert_on_error", cfg)
         self._check(c5, "Alertar en partial", "alert_on_partial", cfg)
         self._check(c5, "Resumen diario (sync OK)", "summary_email", cfg)
@@ -185,6 +181,12 @@ class SettingsView:
 
     def _save(self):
         cfg = load_config()
+        required = ("tunnel_hostname", "tunnel_id", "account_tag", "tunnel_secret_dpapi", "supabase_env", "cloud_db_host", "cloud_db_user", "cloud_db_password_dpapi", "resend_api_key", "alerts_to_email")
+        for key in required:
+            if not self.fields[key].get().strip():
+                self.fields[key].focus_set()
+                self.msg.configure(text=f"Falta el campo obligatorio: {key}", text_color=C["err"])
+                return
         ints = ("tunnel_local_port", "cloud_db_port", "batch_size")
         floats = ("batch_delay_seconds",)
         secrets = SecretStore()
