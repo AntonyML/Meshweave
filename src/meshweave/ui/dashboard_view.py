@@ -43,6 +43,11 @@ class DashboardView:
         self._lbl_backend.pack(anchor="e")
         self._lbl_tasks = ctk.CTkLabel(right, text="Tareas: —", font=ctk.CTkFont(*FONT_UI), text_color=C["muted"])
         self._lbl_tasks.pack(anchor="e")
+        self._lbl_checklist = ctk.CTkLabel(right, text="Estado: —",
+                                           font=ctk.CTkFont(*FONT_UI), text_color=C["muted"],
+                                           cursor="hand2")
+        self._lbl_checklist.pack(anchor="e")
+        self._lbl_checklist.bind("<Button-1>", lambda _e: self.app._tabs.set("Estado"))
 
         # ── Control del túnel ──
         ctrl = card(parent)
@@ -83,6 +88,16 @@ class DashboardView:
         self.console.grid(row=1, column=0, sticky="nsew", padx=8, pady=(2, 8))
         self.console.configure(state="disabled")
         tag_configure(self.console)
+
+    def set_checklist(self, errs: int, warns: int):
+        """Indicador del checklist en el banner (clic → pestaña Estado)."""
+        n = errs + warns
+        if n:
+            self._lbl_checklist.configure(
+                text=f"Estado: {n} pendiente{'s' if n != 1 else ''}",
+                text_color=C["err"] if errs else C["warn"])
+        else:
+            self._lbl_checklist.configure(text="Estado: ✅", text_color=C["ok"])
 
     def clear(self):
         self.console.configure(state="normal")

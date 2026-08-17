@@ -17,6 +17,8 @@ from meshweave import APP_NAME, __version__
 from meshweave import sync as sync_mod
 from meshweave.config import is_first_run, load_config, save_config
 from meshweave.paths import ensure_dirs
+from meshweave.process_runner import CREATE_NO_WINDOW
+from meshweave.readiness import check_readiness, summary
 from meshweave.services.backend_service import BackendService
 from meshweave.services.sync_service import SyncService
 from meshweave.services.tunnel_service import TunnelService
@@ -24,6 +26,7 @@ from meshweave.ui.backend_view import BackendView
 from meshweave.ui.backups_view import BackupsView
 from meshweave.ui.dashboard_view import DashboardView
 from meshweave.ui.diagnostics_view import DiagnosticsView
+from meshweave.ui.estado_view import EstadoView
 from meshweave.ui.logs_view import LogsView
 from meshweave.ui.settings_view import SettingsView
 from meshweave.ui.sync_view import SyncView
@@ -70,7 +73,8 @@ class Actions:
     def _svc(self, cmd: list[str]):
         def _go():
             try:
-                r = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                r = subprocess.run(cmd, capture_output=True, text=True, timeout=60,
+                                   creationflags=CREATE_NO_WINDOW)
                 out = (r.stdout or r.stderr or "").strip()
                 self.app.post(lambda: self.app.toast(out or f"código {r.returncode}",
                                                      "ok" if r.returncode == 0 else "err"))
@@ -217,15 +221,44 @@ class App(ctk.CTk):
 
         self._build_header()
         self._build_tabs()
-        self._toast_lbl = None
         self._poll()
         self.after(1500, self._initial_sync_refresh)
+        self._run_readiness()
 
     def _initial_sync_refresh(self):
         if not getattr(self, "_destroyed", False):
             self.sync.refresh()
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    # ── Checklist de preparación (pestaña Estado + toast) ──
+
+    def _run_readiness(self, toast: bool = True):
+        """Corre el checklist en segundo plano (conexiones + tareas tardan)."""
+        def _go():
+            try:
+                items = check_readiness()
+            except Exception:  # noqa: BLE001 — el checklist nunca rompe la app
+                items = []
+            self.post(lambda: self._apply_readiness(items, toast))
+
+        threading.Thread(target=_go, daemon=True).start()
+
+    def _apply_readiness(self, items, toast: bool):
+        if getattr(self, "_destroyed", False):
+            return
+        self.estado_view.apply_items(items)
+        errs, warns, _ = summary(items)
+        if toast:
+            n = errs + warns
+            if n:
+                self.toast(
+                    f"⚠️ Faltan {n} cosa{'s' if n != 1 else ''} por configurar "
+                    "— mira la pestaña Estado.",
+                    "err" if errs else "warn")
+            else:
+                self.toast("✅ Todo listo — no falta nada.", "ok")
+        self.dashboard.set_checklist(errs, warns)
 
     # ── Cabecera ──
 
@@ -249,10 +282,11 @@ class App(ctk.CTk):
     def _build_tabs(self):
         self._tabs = ctk.CTkTabview(self, fg_color="#141f2e", segmented_button_fg_color=C["card"])
         self._tabs.pack(fill="both", expand=True, padx=10, pady=(6, 10))
-        for name in ("Dashboard", "Túnel", "Backend", "Sincronización", "Backups",
+        for name in ("Dashboard", "Estado", "Túnel", "Backend", "Sincronización", "Backups",
                      "Configuración", "Logs", "Diagnóstico"):
             self._tabs.add(name)
         self.dashboard = DashboardView(self._tabs.tab("Dashboard"), self)
+        self.estado_view = EstadoView(self._tabs.tab("Estado"), self)
         self.tunnel_view = TunnelView(self._tabs.tab("Túnel"), self)
         self.backend_view = BackendView(self._tabs.tab("Backend"), self)
         self.sync_view = SyncView(self._tabs.tab("Sincronización"), self)

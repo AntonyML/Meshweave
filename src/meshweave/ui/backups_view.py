@@ -7,6 +7,7 @@ import customtkinter as ctk
 
 from meshweave.config import load_config
 from meshweave.paths import backups_dir
+from meshweave.process_runner import CREATE_NO_WINDOW
 from meshweave.ui.theme import FONT_UI, C
 from meshweave.ui.widgets import append_line, btn, card, h2, mono_box, tag_configure
 
@@ -101,7 +102,8 @@ class BackupsView:
                                 f"{d}:/backups:ro",
                                 "supabase/postgres:17.6",
                                 "pg_restore", "-l", f"/backups/{f.name}"],
-                               capture_output=True, text=True, timeout=60)
+                               capture_output=True, text=True, timeout=60,
+                               creationflags=CREATE_NO_WINDOW)
             ok = r.returncode == 0
             self.append(f"  {f.name}: {'OK' if ok else 'CORRUPTO'} "
                         f"({(r.stdout or r.stderr).splitlines()[0][:60] if not ok else ''})",

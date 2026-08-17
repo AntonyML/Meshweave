@@ -2,7 +2,6 @@
 exportación de diagnóstico (con secretos enmascarados)."""
 from __future__ import annotations
 
-import ctypes
 import threading
 
 import customtkinter as ctk
@@ -10,16 +9,11 @@ import customtkinter as ctk
 from meshweave import sync as sync_mod
 from meshweave.config import load_config
 from meshweave.logging_setup import redact
+from meshweave.process_runner import CREATE_NO_WINDOW
+from meshweave.readiness import is_admin
 from meshweave.services import cloudflared_manager
 from meshweave.ui.theme import FONT_UI, C
 from meshweave.ui.widgets import append_line, btn, card, h2, mono_box, tag_configure
-
-
-def is_admin() -> bool:
-    try:
-        return bool(ctypes.windll.shell32.IsUserAnAdmin())
-    except Exception:  # noqa: BLE001
-        return False
 
 
 class DiagnosticsView:
@@ -183,7 +177,7 @@ class DiagnosticsView:
             try:
                 import subprocess
                 subprocess.run(["clip"], input=report.encode("utf-16le"),
-                               check=True, timeout=5)
+                               check=True, timeout=5, creationflags=CREATE_NO_WINDOW)
             except Exception:  # noqa: BLE001
                 pass
 

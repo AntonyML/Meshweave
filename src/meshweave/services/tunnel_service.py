@@ -17,7 +17,7 @@ from typing import Any
 from meshweave.config import load_config
 from meshweave.errors import ConfigError
 from meshweave.paths import runtime_dir
-from meshweave.process_runner import ProcessRunner
+from meshweave.process_runner import CREATE_NO_WINDOW, ProcessRunner
 from meshweave.secrets import SecretStore
 from meshweave.services import cloudflared_manager
 
@@ -26,7 +26,8 @@ def cloudflared_service_status() -> str:
     """Estado del servicio de Windows 'cloudflared' (sc query)."""
     try:
         result = subprocess.run(["sc", "query", "cloudflared"],
-                                capture_output=True, text=True, timeout=5)
+                                capture_output=True, text=True, timeout=5,
+                                creationflags=CREATE_NO_WINDOW)
         output = result.stdout.upper()
         if "RUNNING" in output:
             return "running"

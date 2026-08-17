@@ -19,6 +19,7 @@ from typing import Any
 
 from meshweave.errors import DownloadError
 from meshweave.paths import bin_dir
+from meshweave.process_runner import CREATE_NO_WINDOW
 
 RELEASES_API = "https://api.github.com/repos/cloudflare/cloudflared/releases/latest"
 DOWNLOAD_URL = (
@@ -43,7 +44,7 @@ def installed_version() -> str | None:
         return None
     try:
         r = subprocess.run([str(exe), "--version"], capture_output=True,
-                           text=True, timeout=15)
+                           text=True, timeout=15, creationflags=CREATE_NO_WINDOW)
         out = (r.stdout or r.stderr or "").strip()
         # p.ej. "cloudflared version 2024.8.2 (built 2024-08-02-…)"
         for part in out.split():

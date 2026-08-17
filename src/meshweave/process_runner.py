@@ -17,7 +17,10 @@ from pathlib import Path
 
 from meshweave.errors import ProcessError
 
-_CREATE_NO_WINDOW = 0x08000000
+# Suprime la ventana de consola al lanzar procesos hijo (Windows).
+# Público: otros módulos (windows_tasks, backups, app…) lo usan para evitar
+# los parpadeos de consola con powershell / sc / docker / clip.
+CREATE_NO_WINDOW = 0x08000000
 
 
 def _kill_tree(pid: int) -> None:
@@ -25,6 +28,7 @@ def _kill_tree(pid: int) -> None:
     subprocess.run(
         ["taskkill", "/PID", str(pid), "/T", "/F"],
         capture_output=True, text=True, timeout=8,
+        creationflags=CREATE_NO_WINDOW,
     )
 
 
@@ -72,7 +76,8 @@ class ProcessRunner:
             return psutil.pid_exists(pid)
         except ImportError:
             r = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"],
-                               capture_output=True, text=True, timeout=5)
+                               capture_output=True, text=True, timeout=5,
+                               creationflags=CREATE_NO_WINDOW)
             return str(pid) in r.stdout
 
     # ── Ciclo de vida ────────────────────────────────────────────────────
@@ -91,7 +96,7 @@ class ProcessRunner:
                 text=True,
                 encoding="utf-8",
                 errors="replace",
-                creationflags=_CREATE_NO_WINDOW,
+                creationflags=CREATE_NO_WINDOW,
             )
         except OSError as e:
             raise ProcessError(f"No se pudo iniciar {self.name}: {e}") from e

@@ -12,6 +12,7 @@ from typing import Any
 
 from meshweave import APP_NAME
 from meshweave.paths import is_frozen, package_root
+from meshweave.process_runner import CREATE_NO_WINDOW
 
 _DEFAULT_TASK_NAMES = {
     "sync": "MeshweaveSyncService",
@@ -49,6 +50,7 @@ def install_task(name: str, time_: str, subcmd: str = "run") -> tuple[bool, str]
         _sp.run(
             ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps],
             check=True, capture_output=True, text=True, timeout=60,
+            creationflags=CREATE_NO_WINDOW,
         )
         return True, f"Tarea '{name}' creada: diaria a las {time_} (arranca si el PC estaba apagado)."
     except Exception as e:  # noqa: BLE001
@@ -61,6 +63,7 @@ def uninstall_task(name: str) -> tuple[bool, str]:
             ["powershell", "-NoProfile", "-NonInteractive", "-Command",
              f"Unregister-ScheduledTask -TaskName '{name}' -Confirm:$false"],
             check=True, capture_output=True, text=True, timeout=60,
+            creationflags=CREATE_NO_WINDOW,
         )
         return True, f"Tarea '{name}' eliminada."
     except Exception as e:  # noqa: BLE001
@@ -75,6 +78,7 @@ def task_status(name: str) -> str:
              f"$t = Get-ScheduledTask -TaskName '{name}' -ErrorAction SilentlyContinue ; "
              "if ($t) { $t.State } else { 'NO INSTALADA' }"],
             capture_output=True, text=True, timeout=20,
+            creationflags=CREATE_NO_WINDOW,
         )
         out = (r.stdout or r.stderr or "").strip()
         return f"{name}: {out or 'desconocido'}"

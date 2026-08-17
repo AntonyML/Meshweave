@@ -21,6 +21,7 @@ from meshweave.config import (
     read_env_file,
 )
 from meshweave.paths import logs_dir
+from meshweave.process_runner import CREATE_NO_WINDOW
 from meshweave.secrets import SecretStore
 from meshweave.sync.alerts import maybe_send_failure_alert
 from meshweave.sync.engine import now_iso
@@ -56,7 +57,8 @@ def run_backup(
         timeout = int(cfg.get("backup_timeout_seconds", 300))
 
         def _run(args: list[str]):
-            return _sp.run(args, capture_output=True, text=True, timeout=timeout)
+            return _sp.run(args, capture_output=True, text=True, timeout=timeout,
+                           creationflags=CREATE_NO_WINDOW)
 
         emit("Backup de la nube: pg_dump vía supabase-db…", "info")
         r = _run(["docker", "exec", "-e", f"PGPASSWORD={password}", container,
@@ -110,6 +112,26 @@ def run_backup(
     return result
 
 
+def _resolve_dump_path(raw: str) -> Path:
+    """Convierte el argumento de restore en una ruta absoluta del dump.
+
+    Acepta: nombre simple ("cloud-20260816.dump" → se resuelve contra
+    backups/), ruta Windows (C:\\...) o formato MSYS/Git Bash
+    ("/c/ProgramData/..." → C:\\...). Sin esta normalización, un nombre
+    simple se resolvía contra el CWD del proceso, y una ruta "/c/..." se
+    interpretaba como "\\c\\..." (raíz del drive actual + carpeta literal
+    "c"), produciendo errores confusos como "\\c\\ProgramData\\...".
+    """
+    p = Path(raw)
+    if not p.anchor:
+        # Nombre simple (GUI combo / CLI): siempre dentro de backups/.
+        return BACKUPS_DIR / p
+    if not p.drive and len(p.parts) >= 2 and len(p.parts[1]) == 1 and p.parts[1].isalpha():
+        # "/c/ProgramData/..." o "\\c\\ProgramData/..." → "C:\\ProgramData\..."
+        return Path(f"{p.parts[1].upper()}:\\").joinpath(*p.parts[2:])
+    return p
+
+
 def restore_dump(
     cfg: dict[str, Any] | None = None,
     dump_file: str | None = None,
@@ -136,7 +158,7 @@ def restore_dump(
             if not dumps:
                 raise RuntimeError("No hay dumps en el directorio de backups.")
             dump_file = str(dumps[-1])
-        dump = Path(dump_file)
+        dump = _resolve_dump_path(dump_file)
         if not dump.exists():
             raise RuntimeError(f"El dump no existe: {dump}")
 
@@ -151,7 +173,8 @@ def restore_dump(
         timeout = int(cfg.get("backup_timeout_seconds", 300))
 
         def _run(args: list[str]):
-            return _sp.run(args, capture_output=True, text=True, timeout=timeout)
+            return _sp.run(args, capture_output=True, text=True, timeout=timeout,
+                           creationflags=CREATE_NO_WINDOW)
 
         dump_in = "/tmp/restore.dump"
         emit(f"Restaurando {dump.name} → DB local ({db})…", "info")
