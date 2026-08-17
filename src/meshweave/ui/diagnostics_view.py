@@ -3,6 +3,9 @@ exportación de diagnóstico (con secretos enmascarados)."""
 from __future__ import annotations
 
 import threading
+import os
+import platform
+import shutil
 
 import customtkinter as ctk
 
@@ -57,11 +60,33 @@ class DiagnosticsView:
         out.grid(row=2, column=0, sticky="nsew", padx=6, pady=(3, 6))
         out.columnconfigure(0, weight=1)
         out.rowconfigure(1, weight=1)
-        h2(out, "Observabilidad y recursos").grid(row=0, column=0, sticky="w", padx=14, pady=(10, 4))
+        head = ctk.CTkFrame(out, fg_color="transparent")
+        head.grid(row=0, column=0, sticky="ew", padx=10, pady=(6, 2))
+        h2(head, "Observabilidad y recursos").pack(side="left", padx=4)
+        btn(head, "Actualizar recursos", self._load_resources, "border", icon="refresh").pack(side="right")
         self.output = mono_box(out)
         self.output.grid(row=1, column=0, sticky="nsew", padx=8, pady=(0, 8))
         self.output.configure(state="disabled")
         tag_configure(self.output)
+        self._load_resources()
+
+    def _load_resources(self):
+        self.output.configure(state="normal")
+        self.output.delete("1.0", "end")
+        self.output.configure(state="disabled")
+        def _go():
+            lines = []
+            try:
+                import psutil
+                lines += [(f"CPU: {psutil.cpu_percent(interval=1)}%", "info"),
+                          (f"RAM: {psutil.virtual_memory().percent}% usados ({psutil.virtual_memory().used // 1024**2} MB de {psutil.virtual_memory().total // 1024**2} MB)", "info")]
+            except ImportError:
+                lines.append(("(instala psutil para ver CPU y RAM)", "warn"))
+            total, _used, free = shutil.disk_usage("C:\\")
+            lines += [(f"Disco C: {free / 1024**3:.1f} GB libres de {total / 1024**3:.1f} GB", "info"),
+                      (f"OS: {platform.version()}", "info")]
+            self.app.post(lambda: [append_line(self.output, text, level) for text, level in lines])
+        threading.Thread(target=_go, daemon=True).start()
         self._check_version()
 
     def append(self, line: str, level: str = "info"):
