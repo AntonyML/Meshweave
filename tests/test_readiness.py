@@ -4,6 +4,7 @@ from __future__ import annotations
 import pytest
 
 import meshweave.readiness as rd
+import meshweave.sync.alerts as alerts
 
 
 @pytest.fixture(autouse=True)
@@ -19,6 +20,9 @@ def fake_checks(monkeypatch):
     monkeypatch.setattr(rd.windows_tasks, "sync_task_status", lambda cfg: "MeshweaveSyncService: Ready")
     monkeypatch.setattr(rd.windows_tasks, "backup_task_status", lambda cfg: "MeshweaveBackupService: Ready")
     monkeypatch.setattr(rd.shutil, "disk_usage", lambda path: (100, 60, 40 * 1024 ** 3))
+    monkeypatch.setattr(alerts, "resolve_alert_settings", lambda cfg: {
+        "api_key": "test", "from": "alerts@example.com", "to": "a@b.c"
+    })
 
 
 def _cfg(**kw) -> dict:
@@ -26,7 +30,7 @@ def _cfg(**kw) -> dict:
         "tunnel_id": "abc", "tunnel_hostname": "jobs.example.com",
         "supabase_env": r"E:\Supabase\.env",
         "cloud_db_host": "pooler.example.com", "cloud_db_user": "postgres.x",
-        "resend_api_key": "k", "alerts_to_email": "a@b.c",
+        "resend_api_key": "legacy-test-value", "alerts_to_email": "a@b.c",
         "backend_project_dir": "",
         "connect_timeout_seconds": 5,
     }
