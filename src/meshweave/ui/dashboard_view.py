@@ -47,7 +47,7 @@ class DashboardView:
                                            font=ctk.CTkFont(*FONT_UI), text_color=C["muted"],
                                            cursor="hand2")
         self._lbl_checklist.pack(anchor="e")
-        self._lbl_checklist.bind("<Button-1>", lambda _e: self.app._tabs.set("Estado"))
+        self._lbl_checklist.bind("<Button-1>", lambda _e: self.app._nav_to("Panel"))
 
         # ── Control del túnel ──
         ctrl = card(parent)

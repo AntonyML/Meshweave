@@ -25,9 +25,8 @@ from meshweave.services.tunnel_service import TunnelService
 from meshweave.ui import icons
 from meshweave.ui.backend_view import BackendView
 from meshweave.ui.backups_view import BackupsView
-from meshweave.ui.dashboard_view import DashboardView
+from meshweave.ui.panel_view import PanelView
 from meshweave.ui.diagnostics_view import DiagnosticsView
-from meshweave.ui.estado_view import EstadoView
 from meshweave.ui.logs_view import LogsView
 from meshweave.ui.settings_view import SettingsView
 from meshweave.ui.sync_view import SyncView
@@ -276,7 +275,7 @@ class App(ctk.CTk):
     def _apply_readiness(self, items, toast: bool):
         if getattr(self, "_destroyed", False):
             return
-        self.estado_view.apply_items(items)
+        self.panel_view.apply_items(items)
         errs, warns, _ = summary(items)
         if toast:
             n = errs + warns
@@ -287,7 +286,7 @@ class App(ctk.CTk):
                     "err" if errs else "warn")
             else:
                 self.toast("Todo listo — no falta nada.", "ok")
-        self.dashboard.set_checklist(errs, warns)
+        self.panel_view.set_checklist(errs, warns)
 
     # ── Cabecera ──
 
@@ -312,29 +311,26 @@ class App(ctk.CTk):
     # ── Pestañas ──
 
     def _build_tabs(self):
-        # Tira de pestañas: activa con relleno teal (único acento de la UI).
-        self._tabs = ctk.CTkTabview(
-            self, fg_color="#ffffff",
-            segmented_button_fg_color="#ffffff",
-            segmented_button_selected_color=C["accent"],
-            segmented_button_selected_hover_color=C["accent"],
-            segmented_button_unselected_color="#ffffff",
-            segmented_button_unselected_hover_color=C["card"],
-            text_color="#000000",
-        )
-        self._tabs.pack(fill="both", expand=True, padx=10, pady=(6, 10))
-        for name in ("Dashboard", "Estado", "Túnel", "Backend", "Sincronización", "Backups",
-                     "Configuración", "Logs", "Diagnóstico"):
-            self._tabs.add(name)
-        self.dashboard = DashboardView(self._tabs.tab("Dashboard"), self)
-        self.estado_view = EstadoView(self._tabs.tab("Estado"), self)
-        self.tunnel_view = TunnelView(self._tabs.tab("Túnel"), self)
-        self.backend_view = BackendView(self._tabs.tab("Backend"), self)
-        self.sync_view = SyncView(self._tabs.tab("Sincronización"), self)
-        self.backups_view = BackupsView(self._tabs.tab("Backups"), self)
-        self.settings_view = SettingsView(self._tabs.tab("Configuración"), self)
-        self.logs_view = LogsView(self._tabs.tab("Logs"), self)
-        self.diagnostics = DiagnosticsView(self._tabs.tab("Diagnóstico"), self)
+        body = ctk.CTkFrame(self, fg_color="transparent")
+        body.pack(fill="both", expand=True, padx=10, pady=(6, 10))
+        sidebar = ctk.CTkFrame(body, width=160, fg_color=C["card"], corner_radius=0)
+        sidebar.pack(side="left", fill="y"); sidebar.pack_propagate(False)
+        content = ctk.CTkFrame(body, fg_color="transparent")
+        content.pack(side="left", fill="both", expand=True)
+        self._nav_frames = {}
+        entries = [("Panel", PanelView), ("Túnel", TunnelView), ("Backend", BackendView),
+                   ("Sincronización", SyncView), ("Backups", BackupsView),
+                   ("Configuración", SettingsView), ("Diagnóstico", DiagnosticsView)]
+        for name, cls in entries:
+            frame = ctk.CTkFrame(content, fg_color="transparent")
+            frame.place(relwidth=1, relheight=1)
+            self._nav_frames[name] = frame
+            setattr(self, {"Panel":"panel_view", "Túnel":"tunnel_view", "Backend":"backend_view", "Sincronización":"sync_view", "Backups":"backups_view", "Configuración":"settings_view", "Diagnóstico":"diagnostics"}[name], cls(frame, self))
+            ctk.CTkButton(sidebar, text=name, anchor="w", fg_color="transparent", hover_color=C["accent"], command=lambda n=name: self._nav_to(n)).pack(fill="x", padx=6, pady=2)
+        self._nav_to("Panel")
+
+    def _nav_to(self, name: str):
+        self._nav_frames[name].lift()
 
     # ── Eventos del servicio de sync ──
 
@@ -387,11 +383,11 @@ class App(ctk.CTk):
             return
         kind = item[0]
         if kind == "tunnel":
-            self.dashboard.append(item[1], "info")
+            self.panel_view.append(item[1], "info")
             if "terminado" in item[1] or "finalizado" in item[1]:
                 self.refresh_views()
         elif kind == "backend":
-            self.dashboard.append(item[1], "info")
+            self.panel_view.append(item[1], "info")
             self.backend_view.append(item[1], "info")
         elif kind == "sync":
             self.sync_view.append(item[1], item[2])
@@ -413,17 +409,17 @@ class App(ctk.CTk):
         elif kind == "sync_state":
             data = item[1]
             self.sync_view.apply_state(data)
-            self.dashboard._lbl_sync.configure(
+            self.panel_view.dashboard._lbl_sync.configure(
                 text=f"Sync: {((data.get('state') or {}).get('last_run') or {}).get('status', '—')}",
                 text_color=C["ok"] if ((data.get('state') or {}).get('last_run') or {}).get('status') == "ok" else C["muted"])
         elif kind == "sync_error":
             self.sync_view.append(f"Error leyendo estado: {item[1]}", "error")
 
     def refresh_views(self):
-        self.dashboard.refresh()
+        self.panel_view.refresh()
         self.tunnel_view.refresh()
         self.backend_view.refresh()
-        self.dashboard._lbl_sync.configure(text="Sync: —")
+        self.panel_view.dashboard._lbl_sync.configure(text="Sync: —")
 
     def toast(self, msg: str, level: str = "info"):
         # El toast vive en la banda negra: usa variantes claras legibles.
