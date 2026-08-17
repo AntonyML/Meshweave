@@ -15,7 +15,7 @@ from meshweave.process_runner import CREATE_NO_WINDOW
 from meshweave.readiness import is_admin
 from meshweave.services import cloudflared_manager
 from meshweave.ui.theme import FONT_UI, C
-from meshweave.ui.widgets import append_line, btn, card, h2, mono_box, tag_configure
+from meshweave.ui.widgets import append_line, btn, card, h2, mono_box, tag_configure, metric_card, progress_meter, status_pill, set_metric
 
 
 class DiagnosticsView:
@@ -34,10 +34,9 @@ class DiagnosticsView:
         brow.pack(fill="x", padx=10, pady=(0, 6))
         btn(brow, "Ejecutar verificaciones", self.run_checks, "info", icon="search").pack(side="left", padx=4)
         btn(brow, "Exportar diagnóstico (sin secretos)", self.export, "border", icon="upload").pack(side="left", padx=4)
-        self.checks_box = mono_box(top)
+        self.checks_box = ctk.CTkScrollableFrame(top, fg_color="transparent", height=170)
         self.checks_box.pack(fill="x", padx=10, pady=(0, 10))
-        self.checks_box.configure(state="disabled", height=130)
-        tag_configure(self.checks_box)
+        self.checks_box.columnconfigure(0, weight=1)
 
         cf = card(parent)
         cf.grid(row=1, column=0, sticky="ew", padx=6, pady=3)
@@ -63,41 +62,42 @@ class DiagnosticsView:
         head.grid(row=0, column=0, sticky="ew", padx=10, pady=(6, 2))
         h2(head, "Observabilidad y recursos").pack(side="left", padx=4)
         btn(head, "Actualizar recursos", self._load_resources, "border", icon="refresh").pack(side="right")
-        self.output = mono_box(out)
+        self.output = ctk.CTkScrollableFrame(out, fg_color="transparent")
         self.output.grid(row=1, column=0, sticky="nsew", padx=8, pady=(0, 8))
-        self.output.configure(state="disabled")
-        tag_configure(self.output)
+        for col in range(4): self.output.columnconfigure(col, weight=1)
         self._load_resources()
 
     def _load_resources(self):
-        self.output.configure(state="normal")
-        self.output.delete("1.0", "end")
-        self.output.configure(state="disabled")
+        for child in self.output.winfo_children(): child.destroy()
         def _go():
-            lines = []
+            metrics = []
             try:
                 import psutil
-                lines += [(f"CPU: {psutil.cpu_percent(interval=1)}%", "info"),
-                          (f"RAM: {psutil.virtual_memory().percent}% usados ({psutil.virtual_memory().used // 1024**2} MB de {psutil.virtual_memory().total // 1024**2} MB)", "info")]
+                metrics += [("CPU", psutil.cpu_percent(interval=1), "cpu"), ("RAM", psutil.virtual_memory().percent, "ram")]
             except ImportError:
-                lines.append(("(instala psutil para ver CPU y RAM)", "warn"))
+                metrics.append(("Recursos", 0, "psutil no disponible"))
             total, _used, free = shutil.disk_usage("C:\\")
-            lines += [(f"Disco C: {free / 1024**3:.1f} GB libres de {total / 1024**3:.1f} GB", "info"),
-                      (f"OS: {platform.version()}", "info")]
-            self.app.post(lambda: [append_line(self.output, text, level) for text, level in lines])
+            metrics += [("Disco libre", free / total * 100, f"{free / 1024**3:.1f} GB libres"), ("Sistema", 0, platform.system())]
+            self.app.post(lambda: self._apply_resources(metrics))
         threading.Thread(target=_go, daemon=True).start()
         self._check_version()
 
     def append(self, line: str, level: str = "info"):
-        append_line(self.output, line, level)
+        return
+
+    def _apply_resources(self, metrics):
+        for col, (title, value, detail) in enumerate(metrics):
+            item = metric_card(self.output, title, f"{value:.0f}%" if isinstance(value, (int, float)) and value else str(detail),
+                               "warn" if isinstance(value, (int, float)) and value > 85 else "info")
+            item.grid(row=0, column=col, sticky="ew", padx=4, pady=4)
+            if isinstance(value, (int, float)) and value:
+                progress_meter(item, value / 100, "warn" if value > 85 else "info").pack(fill="x", padx=12, pady=(0, 10))
 
     # ── Checks ──
 
     def run_checks(self):
-        self.checks_box.configure(state="normal")
-        self.checks_box.delete("1.0", "end")
-        self.checks_box.configure(state="disabled")
-        append_line(self.checks_box, "Ejecutando verificaciones…", "info")
+        for child in self.checks_box.winfo_children(): child.destroy()
+        ctk.CTkLabel(self.checks_box, text="Ejecutando verificaciones…", text_color=C["info"]).grid(row=0, column=0, sticky="w", padx=10, pady=8)
 
         def _go():
             lines = []
@@ -130,16 +130,13 @@ class DiagnosticsView:
         threading.Thread(target=_go, daemon=True).start()
 
     def _apply_checks(self, lines):
-        self.checks_box.configure(state="normal")
-        self.checks_box.delete("1.0", "end")
-        for text, level in lines:
-            tag = {"ok": "ok", "err": "err"}.get(level, "warn")
-            tb = getattr(self.checks_box, "_textbox", None)
-            if tb:
-                tb.insert("end", "• " + text + "\n", tag)
-            else:
-                self.checks_box.insert("end", "• " + text + "\n")
-        self.checks_box.configure(state="disabled")
+        for child in self.checks_box.winfo_children(): child.destroy()
+        for row, (text, level) in enumerate(lines):
+            item = ctk.CTkFrame(self.checks_box, fg_color=C["card"], corner_radius=7)
+            item.grid(row=row, column=0, sticky="ew", padx=2, pady=3)
+            item.columnconfigure(0, weight=1)
+            ctk.CTkLabel(item, text=text, text_color=C["text"], anchor="w", justify="left", wraplength=740).grid(row=0, column=0, sticky="ew", padx=12, pady=9)
+            status_pill(item, level.upper(), level if level in ("ok", "warn", "err") else "info").grid(row=0, column=1, padx=10, pady=7)
 
     # ── cloudflared manager ──
 

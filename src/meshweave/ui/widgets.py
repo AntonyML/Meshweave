@@ -18,6 +18,38 @@ def h2(parent, text: str, color: str = "text") -> ctk.CTkLabel:
                         font=ctk.CTkFont(*FONT_HEAD), text_color=C[color])
 
 
+def status_pill(parent, text: str, level: str = "info") -> ctk.CTkLabel:
+    colors = {"ok": ("#e5f6eb", C["ok"]), "warn": ("#fff4d6", C["warn"]),
+              "err": ("#fde8e6", C["err"]), "info": ("#e8eef0", C["info"])}
+    bg, fg = colors.get(level, colors["info"])
+    return ctk.CTkLabel(parent, text=text, fg_color=bg, text_color=fg,
+                        corner_radius=9999, padx=10, pady=3,
+                        font=ctk.CTkFont("Segoe UI Semibold", 11))
+
+
+def metric_card(parent, title: str, value: str = "—", level: str = "info") -> ctk.CTkFrame:
+    frame = card(parent)
+    frame.title = ctk.CTkLabel(frame, text=title, text_color=C["sub"],
+                               font=ctk.CTkFont(*FONT_UI))
+    frame.title.pack(anchor="w", padx=12, pady=(10, 0))
+    frame.value = ctk.CTkLabel(frame, text=value, text_color=C["text"],
+                               font=ctk.CTkFont("Segoe UI Semibold", 20))
+    frame.value.pack(anchor="w", padx=12, pady=(2, 10))
+    frame.level = level
+    return frame
+
+
+def set_metric(frame, value: str, level: str = "info") -> None:
+    frame.value.configure(text=value, text_color=C.get(level, C["text"]))
+
+
+def progress_meter(parent, value: float = 0, color: str = "info") -> ctk.CTkProgressBar:
+    bar = ctk.CTkProgressBar(parent, height=8, corner_radius=4,
+                             fg_color="#dfe3e6", progress_color=C.get(color, C["info"]))
+    bar.set(max(0, min(1, value)))
+    return bar
+
+
 def mono_box(parent) -> ctk.CTkTextbox:
     return ctk.CTkTextbox(
         parent, fg_color="#ffffff", border_color=C["border"], border_width=1,

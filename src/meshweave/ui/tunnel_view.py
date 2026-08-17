@@ -7,7 +7,7 @@ from meshweave.config import load_config
 from meshweave.services import cloudflared_manager
 from meshweave.services.tunnel_service import cloudflared_service_status, prepare_runtime
 from meshweave.ui.theme import FONT_UI, C
-from meshweave.ui.widgets import btn, card, h2, mono_box, tag_configure
+from meshweave.ui.widgets import btn, card, h2, metric_card, set_metric, status_pill
 
 
 class TunnelView:
@@ -32,6 +32,8 @@ class TunnelView:
         self.cloudflared_lbl = ctk.CTkLabel(srow, text="cloudflared: —",
                                             font=ctk.CTkFont(*FONT_UI), text_color=C["sub"])
         self.cloudflared_lbl.pack(side="left", padx=16)
+        self.tunnel_metric = metric_card(top, "Disponibilidad", "Verificando…")
+        self.tunnel_metric.pack(side="right", padx=14, pady=8)
 
         brow = ctk.CTkFrame(top, fg_color="transparent")
         brow.pack(fill="x", padx=10, pady=(4, 10))
@@ -53,7 +55,7 @@ class TunnelView:
         srow2 = ctk.CTkFrame(svc, fg_color="transparent")
         srow2.pack(fill="x", padx=14, pady=(6, 4))
         ctk.CTkLabel(srow2, text="Estado:", font=ctk.CTkFont(*FONT_UI), text_color=C["sub"]).pack(side="left")
-        self.svc_lbl = ctk.CTkLabel(srow2, text="—", font=ctk.CTkFont(*FONT_UI), text_color=C["info"])
+        self.svc_lbl = status_pill(srow2, "Verificando…", "info")
         self.svc_lbl.pack(side="left", padx=8)
         irow = ctk.CTkFrame(svc, fg_color="transparent")
         irow.pack(fill="x", padx=10, pady=(2, 10))
@@ -69,28 +71,32 @@ class TunnelView:
         cfg_card.rowconfigure(1, weight=1)
         h2(cfg_card, "Config runtime (generada en %ProgramData%\\Meshweave\\runtime)") \
             .grid(row=0, column=0, sticky="w", padx=14, pady=(10, 4))
-        self.cfg_box = mono_box(cfg_card)
+        self.cfg_box = ctk.CTkScrollableFrame(cfg_card, fg_color="transparent")
         self.cfg_box.grid(row=1, column=0, sticky="nsew", padx=8, pady=(0, 8))
-        self.cfg_box.configure(state="disabled")
-        tag_configure(self.cfg_box)
+        self.cfg_box.columnconfigure(1, weight=1)
         self._show_cfg()
 
     # ── Acciones ──
 
     def _show_cfg(self):
         ok, msg = prepare_runtime(load_config())
-        self.cfg_box.configure(state="normal")
-        self.cfg_box.delete("1.0", "end")
+        for child in self.cfg_box.winfo_children():
+            child.destroy()
         from meshweave.paths import runtime_dir
         rt = runtime_dir() / "config.runtime.yml"
         if rt.exists():
             try:
-                self.cfg_box.insert("1.0", rt.read_text(encoding="utf-8"))
+                lines = [line for line in rt.read_text(encoding="utf-8").splitlines() if line.strip()]
+                for row, line in enumerate(lines):
+                    key, _, value = line.partition(":")
+                    ctk.CTkLabel(self.cfg_box, text=key.strip(), text_color=C["sub"], anchor="w",
+                                 font=ctk.CTkFont(*FONT_UI)).grid(row=row, column=0, sticky="w", padx=10, pady=6)
+                    ctk.CTkLabel(self.cfg_box, text=value.strip() or "—", text_color=C["text"], anchor="w",
+                                 font=ctk.CTkFont("Consolas", 11), wraplength=600).grid(row=row, column=1, sticky="ew", padx=10, pady=6)
             except OSError:
-                self.cfg_box.insert("1.0", f"(no se pudo leer {rt})")
+                ctk.CTkLabel(self.cfg_box, text=f"No se pudo leer {rt}", text_color=C["err"]).grid(row=0, column=0, padx=10, pady=10)
         else:
-            self.cfg_box.insert("1.0", f"(aún no generada — {msg})")
-        self.cfg_box.configure(state="disabled")
+            ctk.CTkLabel(self.cfg_box, text=f"Aún no generada — {msg}", text_color=C["warn"]).grid(row=0, column=0, padx=10, pady=10)
 
     def _validate(self):
         ok, msg = prepare_runtime(load_config())
@@ -129,5 +135,7 @@ class TunnelView:
             text=f"cloudflared: {ver or 'NO INSTALADO'}"
                  + (" (descárgalo en Diagnóstico)" if not ver else ""),
             text_color=C["ok"] if ver else C["err"])
-        self.svc_lbl.configure(text=cloudflared_service_status())
+        service = cloudflared_service_status()
+        self.svc_lbl.configure(text=service, fg_color="#e5f6eb" if "running" in service.lower() else "#fff4d6")
+        set_metric(self.tunnel_metric, "ACTIVO" if running else "DETENIDO", "ok" if running else "muted")
         self._show_cfg()

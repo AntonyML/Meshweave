@@ -14,7 +14,7 @@ from meshweave.config import load_config
 from meshweave.readiness import CheckItem, check_readiness, summary
 from meshweave.ui import icons
 from meshweave.ui.theme import FONT_UI, C
-from meshweave.ui.widgets import btn, card, h2, mono_box, tag_configure
+from meshweave.ui.widgets import btn, card, h2, status_pill
 
 # (icono, color) por estado — se incrustan como imagen en el textbox.
 _ICONS = {"ok": ("check", "ok"), "warn": ("warn", "warn"), "err": ("error", "err")}
@@ -56,10 +56,9 @@ class EstadoView:
         out.columnconfigure(0, weight=1)
         out.rowconfigure(1, weight=1)
         h2(out, "Checklist").grid(row=0, column=0, sticky="w", padx=14, pady=(10, 4))
-        self.output = mono_box(out)
+        self.output = ctk.CTkScrollableFrame(out, fg_color="transparent")
         self.output.grid(row=1, column=0, sticky="nsew", padx=8, pady=(0, 8))
-        self.output.configure(state="disabled")
-        tag_configure(self.output)
+        self.output.columnconfigure(0, weight=1)
 
     def refresh(self):
         self.summary_lbl.configure(text="Revisando…", text_color=C["text"])
@@ -96,17 +95,19 @@ class EstadoView:
                     text=f"Faltan {warns} cosas por revisar (recomendadas): {nombres}",
                     text_color=C["warn"])
 
-        tb = getattr(self.output, "_textbox", None)
-        self.output.configure(state="normal")
-        if tb is not None:
-            tb.delete("1.0", "end")
-            for i in items:
-                tag = _TAGS.get(i.status, "info")
-                icon_name, icon_color = _ICONS.get(i.status, ("info", "black"))
-                tb.image_create("end", image=icons.photo(icon_name, 14, icon_color))
-                tb.insert("end", " " + i.label + "  ", tag)
-                tb.insert("end", f"[{i.kind}]\n", "dim")
-                tb.insert("end", f"    {i.detail}\n", "info")
-                if i.action:
-                    tb.insert("end", f"    → {i.action}\n", "state")
-        self.output.configure(state="disabled")
+        for child in self.output.winfo_children():
+            child.destroy()
+        for row, i in enumerate(items):
+            item = card(self.output)
+            item.grid(row=row, column=0, sticky="ew", padx=2, pady=4)
+            item.columnconfigure(1, weight=1)
+            icon_name, icon_color = _ICONS.get(i.status, ("info", "black"))
+            ctk.CTkLabel(item, image=icons.photo(icon_name, 20, icon_color), text="", width=28).grid(
+                row=0, column=0, rowspan=2, padx=(12, 6), pady=12, sticky="n")
+            ctk.CTkLabel(item, text=i.label, text_color=C["text"], anchor="w",
+                         font=ctk.CTkFont("Segoe UI Semibold", 13)).grid(
+                row=0, column=1, sticky="ew", padx=4, pady=(10, 0))
+            status_pill(item, i.status.upper(), i.status).grid(row=0, column=2, padx=12, pady=(10, 0), sticky="e")
+            ctk.CTkLabel(item, text=f"{i.detail}\n{i.action or ''}", text_color=C["sub"],
+                         justify="left", anchor="w", wraplength=700).grid(
+                row=1, column=1, columnspan=2, sticky="ew", padx=4, pady=(2, 10))
