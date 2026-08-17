@@ -19,7 +19,7 @@ os.environ["MESHWEAVE_DATA_DIR"] = os.environ.get(
 # En CI/headless no se muestra el asistente de primera configuración.
 os.environ["MESHWEAVE_SKIP_WIZARD"] = "1"
 
-EXPECTED_TABS = ["Dashboard", "Túnel", "Backend", "Sincronización", "Backups",
+EXPECTED_TABS = ["Dashboard", "Estado", "Túnel", "Backend", "Sincronización", "Backups",
                  "Configuración", "Logs", "Diagnóstico"]
 
 
