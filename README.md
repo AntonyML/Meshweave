@@ -40,7 +40,7 @@ src/meshweave/
 ├── windows_tasks.py      # Task Scheduler (CLI y GUI comparten la misma lógica)
 ├── services/             # tunnel, backend, cloudflared_manager, sync, updater
 ├── sync/                 # engine (watermark), alerts (Resend), backup
-├── ui/                   # vistas (Dashboard, Túnel, Backend, Sync, Backups, …)
+├── ui/                   # vistas (Panel, Túnel, Backend, Sync, Backups, …)
 └── workers/sync_worker.py# CLI: run/check/status/install/backup/alertas
 ```
 
@@ -103,14 +103,15 @@ Claves principales (públicas — los secretos van a DPAPI):
 | `backup_retention_days` | 7 | Dumps a conservar |
 | `alert_on_error` / `alert_on_partial` / `summary_email` | true | Emails (Resend) |
 
-Edítala desde la pestaña **Configuración** (guarda de forma atómica con
+Edítala desde la sección **Configuración** (guarda de forma atómica con
 respaldo `.bak`). Los secretos se escriben en el almacén DPAPI desde la misma
 pestaña.
 
 ## Primera instalación (nueva PC)
 
 1. Instala y abre Meshweave → el **asistente de primera configuración** te guía:
-   túnel Cloudflare, backend (opcional), Supabase (local + nube) y alertas.
+   túnel Cloudflare, Supabase (local + nube) y alertas. La carpeta, comando y
+   `.env` del backend se configuran en la sección **Backend**.
 2. Si falta `cloudflared`, descárgalo desde el asistente o la pestaña
    **Diagnóstico** (GitHub Releases → `%ProgramData%\Meshweave\bin\`, verificado).
 3. Instala las tareas desde **Sincronización** (01:00 sync / 01:30 backup).
