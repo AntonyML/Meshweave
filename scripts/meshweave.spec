@@ -18,7 +18,9 @@ ROOT = Path(SPECPATH).resolve().parent
 hiddenimports = collect_submodules("meshweave") + [
     "meshweave.workers.sync_worker",  # modo headless (import diferido)
     "psycopg",
-    "psycopg.binary",
+    # psycopg >= 3.3 ya no expone el módulo `psycopg.binary`; la
+    # implementación C (psycopg_binary + libs) la empaqueta el hook
+    # hook-psycopg_binary.py de pyinstaller-hooks-contrib automáticamente.
     "psycopg.rows",
     "psycopg.pq",
     "psycopg.types.json",

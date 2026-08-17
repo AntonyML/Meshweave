@@ -61,9 +61,21 @@ if (Test-Path $Portable) { Remove-Item $Portable }
 Compress-Archive -Path "dist\Meshweave.exe", "config.example.json", "README.md" -DestinationPath $Portable -Force
 
 # Verificación de inicio en modo smoke (headless).
+# La salida NO se oculta: si el exe falla, el log de CI muestra el error real
+# (antes se descartaba con | Out-Null y solo quedaba el exit code 1).
 Write-Host "== Smoke test del ejecutable ==" -ForegroundColor Cyan
 $env:MESHWEAVE_DATA_DIR = Join-Path $env:TEMP "meshweave-smoke-build"
-& "dist\Meshweave.exe" sync status | Out-Null
+# Tee-Object: muestra la salida del exe en el log Y la guarda. El pipeline es
+# imprescindible: sin él PowerShell no espera a las apps GUI y $LASTEXITCODE
+# llega vacío (verificado empíricamente).
+& "dist\Meshweave.exe" sync status | Tee-Object -Variable SmokeOutput
+$SmokeExitCode = $LASTEXITCODE
+if ($SmokeExitCode -ne 0) {
+    Write-Warning "Smoke test terminó con exit code $SmokeExitCode (revisa la salida de arriba)."
+    Write-Warning "Los artefactos se generaron, pero 'Meshweave.exe sync status' no respondió 0."
+} else {
+    Write-Host "Smoke test OK." -ForegroundColor Green
+}
 
 # Checksums (SHA256 con .NET — funciona en cualquier PowerShell, sin
 # depender de Get-FileHash).
@@ -86,3 +98,9 @@ $Lines | Out-File -Encoding ascii dist\SHA256SUMS.txt
 # Limpia el módulo de versión inyectado (la versión ya quedó dentro del exe).
 Remove-Item -Force $BuildVerFile -ErrorAction SilentlyContinue
 Write-Host "Build completo. Artefactos en dist\ (ver SHA256SUMS.txt)" -ForegroundColor Green
+
+# Salida explícita: sin esto, el job de CI hereda el $LASTEXITCODE del último
+# comando nativo (el smoke test) y marca la release como fallida aunque los
+# artefactos se hayan generado correctamente. Los fallos reales (PyInstaller,
+# Inno, throw…) siguen abortando con su propio exit code.
+exit 0
