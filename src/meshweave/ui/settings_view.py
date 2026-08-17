@@ -38,7 +38,7 @@ class SettingsView:
 
     def _build(self, parent):
         parent.columnconfigure(0, weight=1)
-        parent.rowconfigure(1, weight=1)
+        parent.rowconfigure(0, weight=1)
         cfg = load_config()
 
         scroll = ctk.CTkScrollableFrame(parent, fg_color="transparent")
