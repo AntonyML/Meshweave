@@ -14,9 +14,12 @@ from meshweave.ui.widgets import append_line, btn, card, h2, mono_box, tag_confi
 
 def ping_url(url: str, timeout: int = 3) -> bool:
     from urllib.request import urlopen
+    from urllib.error import HTTPError
     try:
         with urlopen(url, timeout=timeout):
             return True
+    except HTTPError:
+        return True
     except Exception:  # noqa: BLE001
         return False
 
@@ -39,6 +42,10 @@ class BackendView:
         self.path_entry.pack(side="left", fill="x", expand=True, padx=4)
         btn(row, "Buscar carpeta", self._browse, "border").pack(side="left", padx=4)
         btn(row, "Conectar", self._connect, "info").pack(side="left", padx=4)
+        self.command_entry = ctk.CTkEntry(top, placeholder_text="Comando (vacío = uvicorn)")
+        self.command_entry.pack(fill="x", padx=14, pady=(2, 2))
+        self.env_entry = ctk.CTkEntry(top, placeholder_text="Archivo .env (vacío = proyecto/.env)")
+        self.env_entry.pack(fill="x", padx=14, pady=(2, 4))
         self.msg_lbl = ctk.CTkLabel(top, text="", text_color=C["sub"], anchor="w")
         self.msg_lbl.pack(fill="x", padx=14, pady=(0, 8))
 
@@ -62,7 +69,7 @@ class BackendView:
         hrow.pack(fill="x", padx=10, pady=(4, 10))
         self.dot_api = ctk.CTkLabel(hrow, text="● API principal  —", text_color=C["muted"])
         self.dot_api.pack(side="left", padx=8)
-        self.dot_ingest = ctk.CTkLabel(hrow, text="● Ingesta :8001  —", text_color=C["muted"])
+        self.dot_ingest = ctk.CTkLabel(hrow, text="● API ingesta (puerto 8001)  —", text_color=C["muted"])
         self.dot_ingest.pack(side="left", padx=8)
         btn(hrow, "Actualizar", self._check_health, "border", icon="refresh").pack(side="right", padx=4)
 
@@ -77,6 +84,9 @@ class BackendView:
         tag_configure(self.output)
 
         self.path_entry.insert(0, str(default_backend_dir()))
+        cfg = load_config()
+        self.command_entry.insert(0, cfg.get("backend_command", ""))
+        self.env_entry.insert(0, cfg.get("backend_env_file", ""))
 
     def _browse(self):
         p = filedialog.askdirectory(title="Carpeta del backend FastAPI")
@@ -87,14 +97,13 @@ class BackendView:
 
     def _connect(self):
         p = self.path_entry.get().strip()
-        ok, msg = self.app.actions.backend_connect(p)
+        ok, msg = self.app.actions.backend_connect(p, self.command_entry.get().strip(), self.env_entry.get().strip())
         self.msg_lbl.configure(text=msg, text_color=C["ok"] if ok else C["err"])
 
     def _check_health(self):
         def _go():
             cfg = load_config()
-            port = int(cfg.get("tunnel_local_port", 8000))
-            api = ping_url(f"http://127.0.0.1:{port}")
+            api = ping_url(cfg.get("backend_health_url") or f"http://127.0.0.1:{cfg.get('tunnel_local_port', 8000)}")
             ingest = ping_url("http://localhost:8001")
             self.app.post(lambda: self._apply_health(api, ingest))
         threading.Thread(target=_go, daemon=True).start()
@@ -102,7 +111,7 @@ class BackendView:
     def _apply_health(self, api: bool, ingest: bool):
         self.dot_api.configure(text=f"● API principal  {'OK' if api else 'sin respuesta'}",
                                text_color=C["ok"] if api else C["muted"])
-        self.dot_ingest.configure(text=f"● Ingesta :8001  {'OK' if ingest else 'sin respuesta'}",
+        self.dot_ingest.configure(text=f"● API ingesta (puerto 8001)  {'OK' if ingest else 'sin respuesta'}",
                                   text_color=C["ok"] if ingest else C["muted"])
 
     def append(self, line: str, level: str = "info"):
@@ -116,4 +125,4 @@ class BackendView:
         self.status_lbl.configure(text=f"● {'Activo' if running else 'Detenido'}",
                                   text_color=C["ok"] if running else C["muted"])
         self.uptime_lbl.configure(text=f"Uptime: {backend.uptime}")
-        self._check_health()
+        self.app.after(2000, self._check_health)

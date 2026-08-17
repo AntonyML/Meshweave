@@ -113,7 +113,7 @@ class Actions:
 
     # ── Backend ──
 
-    def backend_connect(self, project_dir: str) -> tuple[bool, str]:
+    def backend_connect(self, project_dir: str, command: str = "", env_file: str = "") -> tuple[bool, str]:
         from pathlib import Path
         p = Path(project_dir)
         if not p.is_dir():
@@ -123,6 +123,8 @@ class Actions:
         try:
             cfg = load_config()
             cfg["backend_project_dir"] = str(p)
+            cfg["backend_command"] = command
+            cfg["backend_env_file"] = env_file
             save_config(cfg)
             return True, "Backend conectado y guardado en la configuración."
         except Exception as e:  # noqa: BLE001
