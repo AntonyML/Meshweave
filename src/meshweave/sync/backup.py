@@ -126,6 +126,9 @@ def _resolve_dump_path(raw: str) -> Path:
     if not p.anchor:
         # Nombre simple (GUI combo / CLI): siempre dentro de backups/.
         return BACKUPS_DIR / p
+    if (not p.drive and p.anchor in ("\\", "/") and len(p.parts) >= 2
+            and len(p.parts[1]) == 1 and p.parts[1].isalpha()):
+        return Path(f"{p.parts[1].upper()}:\\").joinpath(*p.parts[2:])
     if not p.drive and len(p.parts) >= 2 and len(p.parts[1]) == 1 and p.parts[1].isalpha():
         # "/c/ProgramData/..." o "\\c\\ProgramData/..." → "C:\\ProgramData\..."
         return Path(f"{p.parts[1].upper()}:\\").joinpath(*p.parts[2:])
