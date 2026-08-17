@@ -19,20 +19,20 @@ os.environ["MESHWEAVE_DATA_DIR"] = os.environ.get(
 # En CI/headless no se muestra el asistente de primera configuración.
 os.environ["MESHWEAVE_SKIP_WIZARD"] = "1"
 
-EXPECTED_TABS = ["Dashboard", "Estado", "Túnel", "Backend", "Sincronización", "Backups",
-                 "Configuración", "Logs", "Diagnóstico"]
+EXPECTED_SECTIONS = ["Panel", "Túnel", "Backend", "Sincronización", "Backups",
+                     "Configuración", "Diagnóstico"]
 
 
 def main() -> int:
     from meshweave.app import App
 
     app = App()
-    tabs = list(app._tabs._tab_dict.keys())
-    if tabs != EXPECTED_TABS:
-        print(f"ERROR: pestañas inesperadas: {tabs}")
+    sections = list(app._nav_frames.keys())
+    if sections != EXPECTED_SECTIONS:
+        print(f"ERROR: secciones inesperadas: {sections}")
         app.destroy()
         return 1
-    print("Pestañas OK:", tabs)
+    print("Secciones OK:", sections)
 
     # Cierre programado desde el hilo principal (thread-safe).
     app.after(2500, app._on_close)

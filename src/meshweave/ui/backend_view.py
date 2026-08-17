@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import threading
 from tkinter import filedialog
+from urllib.error import HTTPError
+from urllib.request import urlopen
 
 import customtkinter as ctk
 
@@ -13,8 +15,6 @@ from meshweave.ui.widgets import append_line, btn, card, h2, mono_box, tag_confi
 
 
 def ping_url(url: str, timeout: int = 3) -> bool:
-    from urllib.request import urlopen
-    from urllib.error import HTTPError
     try:
         with urlopen(url, timeout=timeout):
             return True

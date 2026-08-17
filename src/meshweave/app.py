@@ -25,9 +25,8 @@ from meshweave.services.tunnel_service import TunnelService
 from meshweave.ui import icons
 from meshweave.ui.backend_view import BackendView
 from meshweave.ui.backups_view import BackupsView
-from meshweave.ui.panel_view import PanelView
 from meshweave.ui.diagnostics_view import DiagnosticsView
-from meshweave.ui.logs_view import LogsView
+from meshweave.ui.panel_view import PanelView
 from meshweave.ui.settings_view import SettingsView
 from meshweave.ui.sync_view import SyncView
 from meshweave.ui.theme import FONT_MONO, FONT_UI, C
@@ -314,7 +313,8 @@ class App(ctk.CTk):
         body = ctk.CTkFrame(self, fg_color="transparent")
         body.pack(fill="both", expand=True, padx=10, pady=(6, 10))
         sidebar = ctk.CTkFrame(body, width=160, fg_color=C["card"], corner_radius=0)
-        sidebar.pack(side="left", fill="y"); sidebar.pack_propagate(False)
+        sidebar.pack(side="left", fill="y")
+        sidebar.pack_propagate(False)
         content = ctk.CTkFrame(body, fg_color="transparent")
         content.pack(side="left", fill="both", expand=True)
         self._nav_frames = {}

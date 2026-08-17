@@ -2,10 +2,9 @@
 exportación de diagnóstico (con secretos enmascarados)."""
 from __future__ import annotations
 
-import threading
-import os
 import platform
 import shutil
+import threading
 
 import customtkinter as ctk
 
