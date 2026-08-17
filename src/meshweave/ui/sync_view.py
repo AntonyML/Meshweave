@@ -116,7 +116,7 @@ class SyncView:
         if alert:
             alert_text = f"Alertas: activas → {alert['to']} (Resend) | resumen diario: {summary_on}"
         else:
-            alert_text = "Alertas: DESACTIVADAS (falta RESEND_API_KEY o destinatario)"
+            alert_text = "Alertas: DESACTIVADAS (configura Resend en Configuración)"
         self.task_lbl.configure(text=f"Tarea sync: {task}  |  Tarea backup: {backup_task}  |  {alert_text}")
 
         lines = []

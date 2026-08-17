@@ -42,8 +42,9 @@ _STEPS: dict[int, list[tuple[str, str, bool, str]]] = {
         ("Nube password", "cloud_db_password", True, ""),
     ],
     4: [
-        ("Remitente (from)", "resend_from_email", False, "vacío = .env del backend"),
-        ("Destinatario (to)", "alerts_to_email", False, ""),
+        ("Resend API key", "resend_api_key", True, "re_..."),
+        ("Remitente (from)", "resend_from_email", False, "alerts@tu-dominio.com"),
+        ("Destinatario (to)", "alerts_to_email", False, "tu@email.com"),
     ],
 }
 
@@ -227,7 +228,7 @@ class FirstRunWizard(ctk.CTkToplevel):
         self._step_form(
             "5/6 · Alertas por email (Resend, opcional)",
             "Recibirás un email si el sync/backup falla y un resumen diario cuando todo va "
-            "bien. Vacío = se toma del .env del backend.",
+            "bien. Todos los datos de Resend se configuran aquí en Meshweave.",
             _STEPS[4],
             extra=extra,
         )
@@ -337,7 +338,7 @@ class FirstRunWizard(ctk.CTkToplevel):
         cfg = load_config()
         secrets = SecretStore()
         for key, value in self.values.items():
-            if key in ("tunnel_secret", "cloud_db_password"):
+            if key in ("tunnel_secret", "cloud_db_password", "resend_api_key"):
                 if isinstance(value, str) and value.strip():
                     secrets.set(key, value.strip())
                 continue

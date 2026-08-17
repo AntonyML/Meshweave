@@ -11,10 +11,10 @@ import json
 import urllib.error
 import urllib.request
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 
-from meshweave.config import load_config, load_state, read_env_file, save_state
+from meshweave.config import load_config, load_state, save_config, save_state
+from meshweave.secrets import SecretStore
 
 _ALERT_COOLDOWN_MIN = 60
 _SUMMARY_COOLDOWN_H = 12
@@ -23,36 +23,25 @@ _SUMMARY_COOLDOWN_H = 12
 # ── Resolución de credenciales de Resend ────────────────────────────────────
 
 
-def backend_env_path(cfg: dict[str, Any]) -> Path:
-    """.env del backend (para leer RESEND_API_KEY / ADMIN_EMAIL sin duplicar)."""
-    p = Path(cfg.get("backend_project_dir") or "")
-    if p.is_dir():
-        return p / ".env"
-    return p / ".env"
-
-
 def resolve_alert_settings(cfg: dict[str, Any]) -> dict[str, str] | None:
-    """api_key / from / to para Resend. Prioridad: config → .env del backend.
+    """Resuelve Resend exclusivamente desde la configuración de Meshweave.
 
-    Devuelve None si no hay key o destinatario (alertas desactivadas).
+    La API key vive cifrada en SecretStore; from/to son configuración pública.
     """
-    key = (cfg.get("resend_api_key") or "").strip()
+    store = SecretStore()
+    key = (store.get("resend_api_key") or "").strip()
+    # Migración única de versiones anteriores: sacar la key del JSON y
+    # cifrarla inmediatamente en el almacén local de Meshweave.
+    legacy_key = (cfg.pop("resend_api_key", "") or "").strip()
+    if legacy_key and not key:
+        store.set("resend_api_key", legacy_key)
+        key = legacy_key
+        try:
+            save_config(cfg)
+        except OSError:
+            pass
     from_email = (cfg.get("resend_from_email") or "").strip()
     to_email = (cfg.get("alerts_to_email") or "").strip()
-
-    env: dict[str, str] = {}
-    try:
-        env = read_env_file(backend_env_path(cfg))
-    except Exception:  # noqa: BLE001
-        pass
-    if not key:
-        key = env.get("RESEND_API_KEY", "").strip()
-    if not from_email:
-        # Sin default personal: el remitente debe venir de config.json o del
-        # .env del backend, nunca un dominio hardcodeado del desarrollador.
-        from_email = env.get("RESEND_FROM_EMAIL", "").strip()
-    if not to_email:
-        to_email = env.get("ADMIN_EMAIL", "").strip()
     if not key or not to_email or not from_email:
         return None
     return {"api_key": key, "from": from_email, "to": to_email}

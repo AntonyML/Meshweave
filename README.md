@@ -101,17 +101,18 @@ Claves principales (públicas — los secretos van a DPAPI):
 | `batch_size` / `batch_delay_seconds` / `max_retries` | 200 / 1.5 / 4 | Tuning free tier |
 | `schedule_time` / `backup_time` | 01:00 / 01:30 | Horarios de las tareas |
 | `backup_retention_days` | 7 | Dumps a conservar |
-| `alert_on_error` / `alert_on_partial` / `summary_email` | true | Emails (Resend) |
+| `alert_on_error` / `alert_on_partial` / `summary_email` | true | Emails (Resend); API key cifrada en DPAPI |
 
 Edítala desde la sección **Configuración** (guarda de forma atómica con
 respaldo `.bak`). Los secretos se escriben en el almacén DPAPI desde la misma
-pestaña.
+pestaña. Resend se configura completamente aquí; Meshweave no lee credenciales
+desde el `.env` del backend.
 
 ## Primera instalación (nueva PC)
 
 1. Instala y abre Meshweave → el **asistente de primera configuración** te guía:
    túnel Cloudflare, Supabase (local + nube) y alertas. La carpeta, comando y
-   `.env` del backend se configuran en la sección **Backend**.
+   El comando y la carpeta del backend se configuran en la sección **Backend**.
 2. Si falta `cloudflared`, descárgalo desde el asistente o la pestaña
    **Diagnóstico** (GitHub Releases → `%ProgramData%\Meshweave\bin\`, verificado).
 3. Instala las tareas desde **Sincronización** (01:00 sync / 01:30 backup).

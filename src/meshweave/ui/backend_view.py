@@ -46,8 +46,6 @@ class BackendView:
         btn(row, "Conectar", self._connect, "info").pack(side="left", padx=4)
         self.command_entry = ctk.CTkEntry(top, placeholder_text="Comando (vacío = uvicorn)", **entry_kw)
         self.command_entry.pack(fill="x", padx=14, pady=(2, 2))
-        self.env_entry = ctk.CTkEntry(top, placeholder_text="Archivo .env (vacío = proyecto/.env)", **entry_kw)
-        self.env_entry.pack(fill="x", padx=14, pady=(2, 4))
         self.msg_lbl = ctk.CTkLabel(top, text="", text_color=C["sub"], anchor="w")
         self.msg_lbl.pack(fill="x", padx=14, pady=(0, 8))
 
@@ -88,7 +86,6 @@ class BackendView:
         self.path_entry.insert(0, str(default_backend_dir()))
         cfg = load_config()
         self.command_entry.insert(0, cfg.get("backend_command", ""))
-        self.env_entry.insert(0, cfg.get("backend_env_file", ""))
 
     def _browse(self):
         p = filedialog.askdirectory(title="Carpeta del backend FastAPI")
@@ -99,7 +96,7 @@ class BackendView:
 
     def _connect(self):
         p = self.path_entry.get().strip()
-        ok, msg = self.app.actions.backend_connect(p, self.command_entry.get().strip(), self.env_entry.get().strip())
+        ok, msg = self.app.actions.backend_connect(p, self.command_entry.get().strip())
         self.msg_lbl.configure(text=msg, text_color=C["ok"] if ok else C["err"])
 
     def _check_health(self):

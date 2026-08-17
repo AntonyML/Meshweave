@@ -48,7 +48,6 @@ DEFAULTS: dict[str, Any] = {
     # Backend
     "backend_project_dir": "",
     "backend_command": "",
-    "backend_env_file": "",
     "backend_health_url": "http://127.0.0.1:8000/health",
     # Base de datos local (Docker self-hosted) — ruta configurable, sin default
     # con rutas del desarrollador.
@@ -75,13 +74,12 @@ DEFAULTS: dict[str, Any] = {
     "backup_task_name": "MeshweaveBackupService",
     "backup_retention_days": 7,
     "backup_container": "supabase-db",
-    # Alertas por email (Resend) — claves vacías = se leen del .env del backend
+    # Alertas por email (Resend); la API key se guarda cifrada en SecretStore.
     "alert_on_error": True,
     "alert_on_partial": True,
     "alert_min_interval_minutes": 60,
     "summary_email": True,
     "summary_min_interval_hours": 12,
-    "resend_api_key": "",
     "resend_from_email": "",
     "alerts_to_email": "",
     # Actualizaciones

@@ -40,7 +40,6 @@ _HINTS: dict[str, str] = {
     # ── Backend ──
     "backend_project_dir": "Carpeta raíz del proyecto backend (donde está app/main.py). Vacío = Meshweave no gestiona el backend.",
     "backend_command": "Comando para arrancar el backend. Vacío = uvicorn app.main:app en el puerto del túnel.",
-    "backend_env_file": "Archivo .env del backend — de aquí se leen RESEND_API_KEY, ADMIN_EMAIL, etc. Vacío = <proyecto>/.env.",
     # ── Supabase / Sync ──
     "supabase_env": "Ruta al archivo .env de tu Supabase local (Docker). Se usa para conectar a la base local y arrancar el sync.",
     "cloud_db_host": "Host del pooler de la nube, p.ej. db.xxxx.supabase.co:5432 (o aws-0-xx.pooler.supabase.com).",
@@ -55,8 +54,8 @@ _HINTS: dict[str, str] = {
     "backup_time": "Hora diaria del backup del dump de la nube (HH:MM). P.ej. 01:30.",
     "backup_retention_days": "Cuántos días se conservan los dumps locales antes de borrarse automáticamente.",
     # ── Alertas ──
-    "resend_from_email": "Remitente verificado en Resend (p.ej. alerts@tudominio.com). Vacío = RESEND_FROM_EMAIL del .env del backend.",
-    "alerts_to_email": "Tu email: aquí llegan los avisos si el sync o el backup fallan. Vacío = ADMIN_EMAIL del .env del backend.",
+    "resend_from_email": "Remitente verificado en Resend (p.ej. alerts@tudominio.com). Se configura aquí y no se lee de ningún .env.",
+    "alerts_to_email": "Tu email: aquí llegan los avisos si el sync o el backup fallan. Se configura aquí y no se lee de ningún .env.",
     "alert_on_error": "Email cuando una corrida falla por completo.",
     "alert_on_partial": "Email cuando la corrida termina con errores parciales (algunas tablas fallaron).",
     "summary_email": "Resumen diario por email cuando el sync termina sin errores.",
@@ -182,7 +181,7 @@ class SettingsView:
         h2(c5, "Alertas (Resend)").pack(anchor="w", padx=14, pady=(10, 4))
         self._card_intro(c5, _CARD_INTROS["Alertas (Resend)"])
         self._entry(c5, 0, "API key", "resend_api_key", cfg, secret=True, required=True)
-        self._entry(c5, 1, "From", "resend_from_email", cfg)
+        self._entry(c5, 1, "From", "resend_from_email", cfg, required=True)
         self._entry(c5, 2, "To", "alerts_to_email", cfg, required=True)
         self._check(c5, "Alertar en error", "alert_on_error", cfg)
         self._check(c5, "Alertar en partial", "alert_on_partial", cfg)
@@ -197,9 +196,14 @@ class SettingsView:
 
     def _save(self):
         cfg = load_config()
-        required = ("tunnel_hostname", "tunnel_id", "account_tag", "tunnel_secret_dpapi", "supabase_env", "cloud_db_host", "cloud_db_user", "cloud_db_password_dpapi", "resend_api_key", "alerts_to_email")
+        required = ("tunnel_hostname", "tunnel_id", "account_tag", "tunnel_secret_dpapi", "supabase_env", "cloud_db_host", "cloud_db_user", "cloud_db_password_dpapi", "resend_api_key", "resend_from_email", "alerts_to_email")
+        secret_store = SecretStore()
         for key in required:
-            if not self.fields[key].get().strip():
+            if key in ("tunnel_secret_dpapi", "cloud_db_password_dpapi", "resend_api_key"):
+                present = bool(self.fields[key].get().strip()) or secret_store.has(key.replace("_dpapi", ""))
+            else:
+                present = bool(self.fields[key].get().strip())
+            if not present:
                 self.fields[key].focus_set()
                 self.msg.configure(text=f"Falta el campo obligatorio: {key}", text_color=C["err"])
                 return
@@ -208,11 +212,12 @@ class SettingsView:
         secrets = SecretStore()
         for key, entry in self.fields.items():
             value = entry.get().strip()
-            if key.endswith("_dpapi"):
+            if key.endswith("_dpapi") or key == "resend_api_key":
                 real = key.replace("_dpapi", "")
                 if value:
                     secrets.set(real, value)
                     entry.delete(0, "end")
+                cfg.pop(key, None)
                 continue
             if key in ints:
                 try:
@@ -237,7 +242,7 @@ class SettingsView:
         """Recarga los valores desde config.json (sin reconstruir la pestaña)."""
         cfg = load_config()
         for key, entry in self.fields.items():
-            if key.endswith("_dpapi"):
+            if key.endswith("_dpapi") or key == "resend_api_key":
                 entry.delete(0, "end")  # los secretos no se muestran
                 continue
             entry.delete(0, "end")
