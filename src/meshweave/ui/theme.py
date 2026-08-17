@@ -22,15 +22,15 @@ C = dict(
     # ── Superficies y texto ──
     text="#000000",      # tinta principal (Jet Black)
     sub="#5e5e5e",       # texto secundario (Slate)
-    muted="#767676",     # helper / bordes de input (Iron Gray)
-    card="#f6f6f6",      # superficie de tarjetas (Mist Gray)
+    muted="#4b5563",     # texto auxiliar legible sobre blanco
+    card="#f3f4f6",      # superficie de tarjetas
     darker="#000000",    # banda estructural: cabecera/footer (Jet Black)
-    border="#767676",    # trazo fino (hairline)
-    accent="#9dcdd6",    # teal: pestaña activa (único acento de la UI)
+    border="#4b5563",    # borde visible
+    accent="#005f73",    # teal oscuro con contraste AA
 
     # ── Texto sobre bandas negras ──
     ondark="#ffffff",
-    ondark_sub="#afafaf",
+    ondark_sub="#d1d5db",
 )
 
 FONT_MONO = ("Consolas", 11)

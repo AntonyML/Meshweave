@@ -318,6 +318,7 @@ class App(ctk.CTk):
         content = ctk.CTkFrame(body, fg_color="transparent")
         content.pack(side="left", fill="both", expand=True)
         self._nav_frames = {}
+        self._nav_buttons = {}
         entries = [("Panel", PanelView), ("Túnel", TunnelView), ("Backend", BackendView),
                    ("Sincronización", SyncView), ("Backups", BackupsView),
                    ("Configuración", SettingsView), ("Diagnóstico", DiagnosticsView)]
@@ -326,11 +327,18 @@ class App(ctk.CTk):
             frame.place(relwidth=1, relheight=1)
             self._nav_frames[name] = frame
             setattr(self, {"Panel":"panel_view", "Túnel":"tunnel_view", "Backend":"backend_view", "Sincronización":"sync_view", "Backups":"backups_view", "Configuración":"settings_view", "Diagnóstico":"diagnostics"}[name], cls(frame, self))
-            ctk.CTkButton(sidebar, text=name, anchor="w", fg_color="transparent", hover_color=C["accent"], command=lambda n=name: self._nav_to(n)).pack(fill="x", padx=6, pady=2)
+            nav_btn = ctk.CTkButton(sidebar, text=name, anchor="w", fg_color="transparent",
+                                    text_color=C["text"], hover_color=C["accent"],
+                                    command=lambda n=name: self._nav_to(n))
+            nav_btn.pack(fill="x", padx=6, pady=2)
+            self._nav_buttons[name] = nav_btn
         self._nav_to("Panel")
 
     def _nav_to(self, name: str):
         self._nav_frames[name].lift()
+        for section, nav_btn in self._nav_buttons.items():
+            nav_btn.configure(fg_color=C["accent"] if section == name else "transparent",
+                              text_color=C["ondark"] if section == name else C["text"])
 
     # ── Eventos del servicio de sync ──
 

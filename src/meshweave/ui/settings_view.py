@@ -14,6 +14,19 @@ from meshweave.ui.theme import FONT_UI, C
 from meshweave.ui.widgets import btn, card, h2
 
 FONT_HINT = ("Segoe UI", 11)
+_PLACEHOLDERS = {
+    "tunnel_hostname": "app.ejemplo.com",
+    "tunnel_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "account_tag": "Identificador de cuenta",
+    "supabase_env": r"C:\ruta\supabase\.env",
+    "cloud_db_host": "aws-0-xx.pooler.supabase.com",
+    "cloud_db_user": "postgres.<project-ref>",
+    "cloud_db_port": "5432",
+    "cloud_db_name": "postgres",
+    "resend_api_key": "re_...",
+    "resend_from_email": "alerts@tu-dominio.com",
+    "alerts_to_email": "tu@email.com",
+}
 
 # Guía en lenguaje natural para cada campo de configuración.
 _HINTS: dict[str, str] = {
@@ -74,7 +87,10 @@ class SettingsView:
         lab = ctk.CTkLabel(r, text=label + (" *" if required else ""), width=210, font=ctk.CTkFont(*FONT_UI),
                      text_color=C["err"] if required else C["sub"], anchor="w")
         lab.pack(side="left")
-        e = ctk.CTkEntry(r, show="*" if secret else "")
+        e = ctk.CTkEntry(r, show="*" if secret else "", fg_color="#ffffff",
+                         text_color=C["text"], border_color=C["border"],
+                         placeholder_text=_PLACEHOLDERS.get(key, ""),
+                         placeholder_text_color=C["muted"])
         e.pack(side="left", fill="x", expand=True, padx=4)
         e.insert(0, str(cfg.get(key, "") or ""))
         self.fields[key] = e

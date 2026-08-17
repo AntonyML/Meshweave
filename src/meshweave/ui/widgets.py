@@ -30,8 +30,8 @@ def mono_box(parent) -> ctk.CTkTextbox:
 _BTN_STYLES = {
     "ok":     ("#000000", "#333333", "#ffffff", None, 8),        # CTA negro
     "dark":   ("#000000", "#333333", "#ffffff", None, 8),
-    "info":   ("#ffffff", "#f6f6f6", "#000000", "#000000", 8),   # contorno negro
-    "border": ("#ffffff", "#f6f6f6", "#000000", "#767676", 8),   # contorno gris
+    "info":   ("#ffffff", "#e5e7eb", "#000000", "#000000", 8),   # contorno negro
+    "border": ("#ffffff", "#e5e7eb", "#000000", C["border"], 8),   # contorno accesible
     "err":    ("#d93025", "#b3261e", "#ffffff", None, 8),        # destructivo
     "pill":   ("#ffffff", "#f6f6f6", "#000000", None, 9999),     # píldora (nav negra)
 }

@@ -156,13 +156,15 @@ def _check_task(key: str, label: str, hora: str, status_text: str) -> CheckItem:
 
 
 def _check_alerts(cfg: dict[str, Any]) -> CheckItem:
-    if cfg.get("resend_api_key") and cfg.get("alerts_to_email"):
+    from meshweave.sync.alerts import resolve_alert_settings
+
+    if resolve_alert_settings(cfg):
         return CheckItem("alerts", "Alertas por email", "ok", "config",
                          "Emails de alerta configurados (Resend).")
     return CheckItem(
         "alerts", "Alertas por email", "warn", "config",
         "Faltan los datos del email de alertas (Resend) o el destinatario.",
-        "Configúralos en la pestaña Configuración para recibir un aviso si el "
+        "Configúralos en la sección Configuración para recibir un aviso si el "
         "sync o el backup fallan.",
     )
 
