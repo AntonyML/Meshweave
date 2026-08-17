@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import subprocess
+import shutil
 
 import customtkinter as ctk
 
@@ -98,15 +99,15 @@ class BackupsView:
         self.append("Validación de dumps (solo lectura de cabecera):", "info")
         d = backups_dir()
         for f in sorted(d.glob("cloud-*.dump")):
-            r = subprocess.run(["docker", "run", "--rm", "-v",
-                                f"{d}:/backups:ro",
-                                "supabase/postgres:17.6",
-                                "pg_restore", "-l", f"/backups/{f.name}"],
-                               capture_output=True, text=True, timeout=60,
-                               creationflags=CREATE_NO_WINDOW)
-            ok = r.returncode == 0
-            self.append(f"  {f.name}: {'OK' if ok else 'CORRUPTO'} "
-                        f"({(r.stdout or r.stderr).splitlines()[0][:60] if not ok else ''})",
+            pg_restore = shutil.which("pg_restore")
+            if pg_restore:
+                r = subprocess.run([pg_restore, "-l", str(f)], capture_output=True,
+                                   text=True, timeout=60, creationflags=CREATE_NO_WINDOW)
+                ok, detail = r.returncode == 0, (r.stderr or r.stdout).splitlines()[0][:60] if r.returncode else ""
+            else:
+                ok = f.read_bytes()[:5] == b"PGDMP"
+                detail = "sin pg_restore local, cabecera inválida" if not ok else "sin pg_restore local"
+            self.append(f"  {f.name}: {'OK' if ok else 'CORRUPTO'} ({detail})",
                         "ok" if ok else "err")
 
     def refresh(self):
